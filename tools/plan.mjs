@@ -10,7 +10,7 @@ import { SLUG_RE, ID_RE, parsePlanBranch, parsePlanFilename, planPath, specPath,
 import { splitFrontmatter, setFrontmatterValue, section, headings } from './lib/markdown.mjs';
 import { parsePlan, tickTasks, rulingsFromLedger, completionSection } from './lib/plans.mjs';
 import { copyLefthookLocal, hookSelfTest } from './lib/hooks.mjs';
-import { criteriaByFeature, criteriaBlocks, mergeCriteria, newFeatureDoc } from './lib/features.mjs';
+import { criteriaByFeature, mergeCriteria, newFeatureDoc, splitCriteria, removeCriteria } from './lib/features.mjs';
 import { explanationSections, fixPrBody, featurePrBody } from './lib/pr-text.mjs';
 import { matchesAny } from './lib/glob.mjs';
 import {
@@ -363,6 +363,18 @@ function cmdComplete(args) {
     throw new HubError(`${specRel}: ${e.message}`);
   }
 
+  // Criteria the spec retires must exist in a feature document today.
+  const retiredIds = (() => {
+    const ac = section(showFile(root, hubBase, specRel) || '', 'Acceptance criteria');
+    return ac ? splitCriteria(ac.text).removed.map((b) => b.id) : [];
+  })();
+  const featureFiles = gitTry(root, ['ls-tree', '--name-only', `${hubBase}:${DIRS.features}`]).out.split('\n').filter((n) => n.endsWith('.md')).map((n) => `${DIRS.features}/${n}`);
+  for (const rid of retiredIds) {
+    if (!featureFiles.some((f) => (showFile(root, hubBase, f) || '').includes(`**${rid}**`))) {
+      throw new HubError(`${specRel} retires ${rid}, but no feature document on ${hubBase} defines it`);
+    }
+  }
+
   const branch = `docs/${id}-${slug}-completion`;
   git(root, ['switch', '--quiet', '--no-track', '-c', branch, hubBase]);
   syncSubmodules();
@@ -394,6 +406,13 @@ function cmdComplete(args) {
     writeFileSync(abs, mergeCriteria(existsSync(abs) ? readFileSync(abs, 'utf8') : newFeatureDoc(title, goalOf(read(root, specRel))), f.blocks));
     git(root, ['add', f.rel]);
     log(`${f.rel}: ${f.blocks.map((b) => b.id).join(', ')} now describe main`);
+  }
+  for (const rel of retiredIds.length ? featureFiles : []) {
+    const r = removeCriteria(read(root, rel), retiredIds);
+    if (!r.removed.length) continue;
+    writeFileSync(join(root, rel), r.text);
+    git(root, ['add', rel]);
+    log(`${rel}: retired ${r.removed.join(', ')}; delete or retitle the tests that cited them`);
   }
   graphifyUpdate();
   console.log(`
@@ -603,8 +622,9 @@ function cmdPr(args) {
   const { slug, plans, specRel } = workFiles(id, cfg);
   const specText = hubFile(specRel, cfg);
   const acSection = section(specText, 'Acceptance criteria');
-  const criteria = acSection ? criteriaBlocks(acSection.text) : [];
-  const criteriaText = criteria.length ? criteria.map((b) => b.lines.join('\n')).join('\n') : '- No behaviour changes.';
+  const { added: criteria, removed: retired } = acSection ? splitCriteria(acSection.text) : { added: [], removed: [] };
+  const retiredText = retired.length ? `\n\n**Behaviour it retires**\n\n${retired.map((b) => b.lines.join('\n')).join('\n')}` : '';
+  const criteriaText = (criteria.length ? criteria.map((b) => b.lines.join('\n')).join('\n') : '- No new or changed behaviour.') + retiredText;
   const goal = goalOf(specText);
 
   // Hub PRs (spec and completion) are opened from the current hub branch.

@@ -192,7 +192,9 @@ One file per user-facing capability in `docs/features/`. Each opens with one use
 
 Multi-step user-interface flows may use Given/When/Then for a single criterion instead; never both forms for the same criterion.
 
-IDs look like `BILL-ISSUE-1`: uppercase segments ending in a number. They never start with `ADR-` or `RFC-`. An ID, once published, is never reused for different behaviour.
+IDs look like `BILL-ISSUE-1`: uppercase segments ending in a number. They never start with `ADR-`, `RFC-` or `REQ-`. An ID, once published, is never reused for different behaviour.
+
+Behaviour also goes away. A design spec retires criteria under a `### Removed` heading inside its `## Acceptance criteria`, each with the reason; `pnpm plan:complete` deletes them from their feature document, and any test still titled with a retired ID fails `pnpm check` until the work deletes or retitles it. The spec keeps the record of what was retired and why.
 
 ### Design specs (records)
 

@@ -27,12 +27,30 @@ const target = (line) => {
   return m ? m[1] || m[2] : null;
 };
 
+// A spec's acceptance criteria, split into those it adds or changes and those it retires. Retired
+// criteria sit under a "### Removed" heading inside "## Acceptance criteria", one bullet each with
+// the reason: "- **NOTES-OLD-1** Archiving replaces deletion, so this no longer applies."
+export function splitCriteria(acText) {
+  const parts = acText.split(/^(?=### )/m);
+  const removedPart = parts.find((p) => /^### Removed\s*$/m.test(p.split('\n')[0]));
+  const rest = parts.filter((p) => p !== removedPart).join('');
+  return { text: rest, added: criteriaBlocks(rest), removed: removedPart ? criteriaBlocks(removedPart) : [] };
+}
+
+export function removeCriteria(featureText, ids) {
+  const blocks = criteriaBlocks(featureText).filter((b) => ids.includes(b.id));
+  let out = featureText;
+  for (const b of blocks) out = out.replace(`${b.lines.join('\n')}\n`, '');
+  return { text: out, removed: blocks.map((b) => b.id) };
+}
+
 // Group the spec's criteria by target feature document. The spec's `## Acceptance criteria` may
 // group criteria under `### <feature target>` headings; otherwise every criterion goes to the
 // single `Feature:` target in `## Links`. Returns Map<target, blocks[]>.
 export function criteriaByFeature(specText) {
-  const ac = section(specText, 'Acceptance criteria');
-  if (!ac) return new Map();
+  const acSection = section(specText, 'Acceptance criteria');
+  if (!acSection) return new Map();
+  const ac = { text: splitCriteria(acSection.text).text };
   const groups = new Map();
   const parts = ac.text.split(/^(?=### )/m);
   const grouped = parts.filter((p) => p.startsWith('### ') && target(p.split('\n')[0]));

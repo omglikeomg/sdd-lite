@@ -52,6 +52,14 @@ Errors: provider declines map to HTTP 402 with the provider's reason; provider o
 - **CHECKOUT-PAY-7** If the saved card has expired, then the system shall reject the payment with HTTP 422 before calling the payment provider.
 - **CHECKOUT-PAY-8** Where a customer has no saved cards, the checkout page shall show only the new-card form.
 
+### Removed
+
+<!-- hub, optional: criteria this work retires, each with the reason. pnpm plan:complete deletes
+     them from their feature document; tests that still cite them then fail pnpm check, so delete
+     or retitle those tests in the same work. -->
+
+- **CHECKOUT-PAY-3** Card payments no longer fail over to the legacy gateway during provider outages; the gateway is decommissioned.
+
 ## Decisions
 
 <!-- hub: link ADRs this design creates or depends on. Most designs create none; see the ADR

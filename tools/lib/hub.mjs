@@ -79,9 +79,14 @@ export function loadAcDefinitions(root) {
   const defs = new Map();
   const scan = (dir, kind) => {
     for (const rel of mdFiles(root, dir)) {
+      // Criteria a spec retires (under "### Removed") are not definitions: tests citing them fail.
+      let retired = false;
       read(root, rel)
         .split('\n')
         .forEach((line, i) => {
+          const h = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
+          if (h) retired = h[1].length === 3 && h[2] === 'Removed' ? true : h[1].length <= 3 ? false : retired;
+          if (retired) return;
           for (const m of line.matchAll(AC_DEFINITION_RE)) {
             if (!isAcId(m[1])) continue;
             if (!defs.has(m[1])) defs.set(m[1], []);

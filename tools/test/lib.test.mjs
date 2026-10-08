@@ -7,7 +7,11 @@ import {
 import { splitFrontmatter, setFrontmatterValue, stripCode, codeSpans, links, section } from '../lib/markdown.mjs';
 import { globToRegExp, matchesAny } from '../lib/glob.mjs';
 import { parsePlan, tickTasks, rulingsFromLedger } from '../lib/plans.mjs';
-import { criteriaBlocks, criteriaByFeature, mergeCriteria, newFeatureDoc } from '../lib/features.mjs';
+import { criteriaBlocks, criteriaByFeature, mergeCriteria, newFeatureDoc, splitCriteria, removeCriteria } from '../lib/features.mjs';
+import { loadAcDefinitions } from '../lib/hub.mjs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { explanationSections, fixPrBody } from '../lib/pr-text.mjs';
 
 test('plan branches carry type, six-digit ID and slug', () => {
@@ -153,4 +157,24 @@ test('commit bodies become PR sections', () => {
   assert.match(body, /^## Context\n\nReported in acme\/hub#3: \*\*Totals off\*\*\.\n\n## Root cause\n\ntotals used floor\.\n\n## What changed\n\nround half-up\./);
   assert.match(body, /## How it was verified\n\nadded a 10\.005 case\.\n\nTests added or changed:\n\n- `src\/a\.spec\.ts`/);
   assert.match(body, /\n\nFixes acme\/hub#3\nRefs: BILL-1$/);
+});
+
+test('specs can retire criteria; retired criteria are not definitions', () => {
+  const ac = '\n- **PAY-5** new behaviour\n\n### Removed\n\n- **PAY-2** Archiving replaces deletion.\n';
+  const split = splitCriteria(ac);
+  assert.deepEqual(split.added.map((b) => b.id), ['PAY-5']);
+  assert.deepEqual(split.removed.map((b) => b.id), ['PAY-2']);
+  const spec = `# S\n\n## Acceptance criteria\n${ac}\n## Links\n\n- Feature: [Pay](../../features/pay.md)\n`;
+  assert.deepEqual(criteriaByFeature(spec).get('../../features/pay.md').map((b) => b.id), ['PAY-5'], 'retired criteria are not moved in');
+  const feature = '---\ntype: feature\n---\n# Pay\n\n## Acceptance criteria\n\n- **PAY-1** keep\n- **PAY-2** goes\n  - Given old flow\n- **PAY-3** keep\n';
+  const r = removeCriteria(feature, ['PAY-2']);
+  assert.deepEqual(r.removed, ['PAY-2']);
+  assert.deepEqual(criteriaBlocks(r.text).map((b) => b.id), ['PAY-1', 'PAY-3']);
+  const root = mkdtempSync(join(tmpdir(), 'hub-ac-'));
+  mkdirSync(join(root, 'docs/features'), { recursive: true });
+  mkdirSync(join(root, 'docs/superpowers/specs'), { recursive: true });
+  writeFileSync(join(root, 'docs/superpowers/specs/000001-x-design.md'), spec);
+  const defs = loadAcDefinitions(root);
+  assert.ok(defs.has('PAY-5'));
+  assert.ok(!defs.has('PAY-2'), 'a test still citing a retired criterion fails pnpm check');
 });
