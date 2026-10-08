@@ -34,6 +34,9 @@ sequenceDiagram
 | Implementation starts | `pnpm plan:start <id> --repo <name>` | `status:ongoing` |
 | Code is ready | `pnpm plan:pr <id> --repo <name> --create` | PR opened in the product repository; "Code ready for review" comment with tasks and decisions; `breaking-change` if a commit header has `!` |
 | Work shipped | `pnpm plan:pr <id> --completion --create` | Completion PR with `Closes #<id>`; "Shipped" comment with behaviour, decisions, deferred items and manual steps |
+| An epic starts | `pnpm epic:new <slug> [--issue <n>]` | The epic's issue (created or adopted) gets `tier:epic`, `epic:<slug>`, `status:ongoing` and an "Epic design started" comment |
+| Epic design ready | `pnpm epic:pr <slug> --create` | Epic PR labelled `epic:<slug>`; "Epic design ready for review" comment with outcome and phases |
+| A phase of an epic starts | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Its tracking issue becomes a **sub-issue** of the epic's issue; every PR of the phase (hub and product) carries `epic:<epic>` |
 | A bug is picked up | `pnpm work:start <repo> fix/<slug> --issue <n>` | The issue and its comments are saved as context for the agent; `tier:bounded`, `status:ongoing`; "Work started" comment |
 | The fix is ready | `pnpm work:pr <repo> fix/<slug> --create` | PR with Context, Root cause, What changed, How it was verified and `Fixes <issue>`; "Fix ready for review" comment explaining cause and fix |
 | Planned work stops | `pnpm plan:abandon <id> --reason "…"` | Open spec and code PRs closed with the reason; "Abandoned" comment; issue closed as *not planned* |
@@ -51,10 +54,10 @@ Commands are the only writers of command-owned labels. Changing one by hand is o
 | `status:ongoing` | commands | Being designed or implemented |
 | `status:pending-review` | commands | A PR is waiting for review |
 | `status:needs-manual-steps` | commands | Shipped, but people must still do something: the spec has a `## Manual steps` section or tasks were deferred. The closing comment lists them. |
-| `tier:architectural`, `tier:bounded` | commands | Which path the work takes (`docs/WORKFLOW.md`, "Work tiers") |
+| `tier:architectural`, `tier:bounded`, `tier:epic` | commands | Which path the work takes (`docs/WORKFLOW.md`, "Work tiers"); `tier:epic` marks an epic's own issue |
 | `type:feat`, `type:fix`, `type:refactor`, `type:perf`, `type:chore`, `type:docs` | commands | The Conventional Commit type of the planned branch |
 | `repo:<name>` | commands | Product repositories the work touches |
-| `epic:<slug>` | commands | Part of `docs/epics/<slug>.md` |
+| `epic:<slug>` | commands | Part of `docs/epics/<slug>/`; also set on the phase's PRs, in the hub and in product repositories (created there when first needed) |
 | `breaking-change` | commands | A commit header used `!`: behaviour others rely on changes |
 | `kind:feature`, `kind:bug` | issue forms | Set when the issue is opened from a form |
 | `priority:p0` … `priority:p3` | people | Product priority |
@@ -101,7 +104,7 @@ Commit the `hub.config.json` change (`chore: enable github mode`). From then on 
 
 Create a Project (board or table) for the hub repository, then open its **Workflows**:
 
-- **Auto-add items**: repository = the hub, filter `is:issue label:"status:ongoing"`. Every piece of work gets `status:ongoing` when it starts (planned or bounded), so it appears on the board then, and stays after its status label moves on. GitHub Free allows one auto-add workflow per project; paid plans allow more. Items that existed before you enable it are not added; drag those in by hand.
+- **Auto-add items**: repository = the hub, filter `is:issue label:"status:ongoing"`. Epics and their phases arrive the same way; GitHub shows each phase as a sub-issue of its epic. Every piece of work gets `status:ongoing` when it starts (planned or bounded), so it appears on the board then, and stays after its status label moves on. GitHub Free allows one auto-add workflow per project; paid plans allow more. Items that existed before you enable it are not added; drag those in by hand.
 - **Issue or pull request closed** sets status Done. It is enabled by default when the project is created; keep it.
 
 Then add a board column or table group per `status:*` label, and filters by `repo:*`, `epic:*`, `priority:*` or `breaking-change` as your team likes. The Project reads labels; nothing in the hub writes to it.

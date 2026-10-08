@@ -47,8 +47,8 @@ test('acceptance-criteria IDs exclude ADR and RFC', () => {
   assert.ok(!isAcId('ADR-0003'));
   assert.ok(!isAcId('RFC-7231'));
   assert.ok(!isAcId('bill-issue-1'));
-  const src = "it('BILL-ISSUE-1: issues', () => {});\ntest.describe(\"CHECKOUT-PAY-2: flow\", () => {});\nit('UTF-8 handling')";
-  assert.deepEqual([...src.matchAll(TEST_TITLE_AC_RE)].map((m) => m[1]), ['BILL-ISSUE-1', 'CHECKOUT-PAY-2']);
+  const src = "it('BILL-ISSUE-1: issues', () => {});\ntest.describe(\"CHECKOUT-PAY-2: flow\", () => {});\nit('UTF-8 handling')\nit.each([\n  ['a', 1],\n])('COMPARE-PAGE-4: %s asks for ids', () => {});\nexpect(x).toBe('NOT-AN-ID-1')";
+  assert.deepEqual([...src.matchAll(TEST_TITLE_AC_RE)].map((m) => m[1]), ['BILL-ISSUE-1', 'CHECKOUT-PAY-2', 'COMPARE-PAGE-4']);
   assert.equal(adrLabel('7'), 'ADR-0007');
 });
 

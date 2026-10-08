@@ -65,11 +65,25 @@ The hub records, for each product repository, the commit its documents describe.
 | `plan:complete`: "no commit with Plan: <id>" | The code PR is not merged yet, or its squash message lost the footers (edited by hand, or a "title only" squash setting) | Merge it; if it is merged, `pnpm plan:complete <id> --merged <repo>=<squash sha>` |
 | `plan:complete`: tasks without a `Task:` footer | A task was not done, or its commit lacked the footer | Finish it, or `--defer <n,…>` to record it as deferred (the tracking issue then gets `status:needs-manual-steps`) |
 | `pnpm check` after completion: a structural file is not documented | New NestJS modules, handlers, routers… must appear in the repository's architecture docs | Add the backticked path to `docs/codebases/<repo>/ARCHITECTURE.md` or an area doc's `paths` |
-| `pnpm check`: "X has no test whose title starts with X:" | A criterion moved into `docs/features/` has no test titled with its ID | Rename the test to start with `X:`, or remove the criterion if the behaviour did not ship |
+| `pnpm check`: "X has no test whose title starts with X:" | A criterion moved into `docs/features/` has no test titled with its ID | Rename the test to start with `X:` (table tests count: `it.each(rows)('X: %s …')`), or remove the criterion if the behaviour did not ship |
+| Onboarding: "test cites X, which no feature or design spec defines" | The repository's tests carry acceptance-criteria IDs from an earlier process | Port the original criteria into `docs/features/` as they were written (preferred). If the source is lost, rebuild them from the test titles and say so in the commit message |
+| `pnpm check`: "the work is done but this documentation item is not ticked" | The spec's Documentation impact was not applied | Update the named document, then tick the item in the spec |
+| `pnpm check`: "approved specs need a Documentation impact section" | The spec predates the rule or skipped it | Add the section; `- None: <why>` if nothing changes |
 | Two completion PRs conflict on `repos/x` | Both moved the same pointer | Rebase the later one, `git -C repos/x checkout origin/main`, `git add repos/x`, `pnpm check` |
 | QA fails after release | The work must be undone | `pnpm plan:revert <id>` prints the commands; it finds commits by footer and by the plan's Completion record |
 | Planned work should stop | Priorities changed or the design was wrong | `pnpm plan:abandon <id> --reason "…"`; it refuses once code has merged, because shipped work is reverted, not abandoned |
 | A fix PR has only a "What changed" section | The commit body had no labelled paragraphs | Amend the commit body with `Cause:` / `Rationale:`, `Fix:`, `Verification:` paragraphs, then rerun `pnpm work:pr` (with `--create`, the open PR is reused; edit its text on GitHub to match) |
+
+## Epics and contracts
+
+| Symptom | Why | Fix |
+|---|---|---|
+| `pnpm check`: "REQ-n from the PRD is not in the requirement map" | A requirement is unaccounted for | Map it to a phase, a spike, or "Out of scope" with the reason |
+| `pnpm check`: "REQ-n is not defined in the epic's prd.md" | A spec or the map cites a requirement the PRD does not have | Fix the ID, or add the requirement to `prd.md` in a PR the PM approves |
+| `pnpm check`: "the epic is done but phase … links no design spec" | A phase never started | Start it, or mark it out of scope in the requirement map and remove the row |
+| `plan:new --epic`: "no epic docs/epics/<slug>/README.md" | The epic is not on this branch yet | Merge the epic PR first, then start phases from `main` |
+| GitHub refused to make the phase a sub-issue | Sub-issues are unavailable for that repository or plan | Nothing breaks: the `epic:<slug>` label still groups them on the board |
+| `pnpm check`: "cite the code that implements this contract in <repo>" | A contract names a repository without pointing at its code | Add a backticked `repos/<repo>/…` path for that side |
 
 ## GitHub mode
 

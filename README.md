@@ -48,10 +48,11 @@ Split big ideas into bounded steps where you can; keep the architectural path fo
 | You want to know | Look in |
 |---|---|
 | How the system fits together | `docs/ARCHITECTURE.md`, then the map of each repository in `docs/codebases/` |
+| How the repositories talk to each other | `docs/contracts/` |
 | What the product does, and how we know it works | `docs/features/`: acceptance criteria, each proven by a test titled with its ID |
 | Why something was decided | `docs/adr/`, listed in order under "Evolution" in the architecture document |
 | What a piece of work set out to do | `docs/superpowers/specs/` (design) and `docs/superpowers/plans/` (tasks) |
-| What is in flight | `pnpm plan:status` and `docs/epics/` |
+| What is in flight | `pnpm plan:status` and `docs/epics/` (each epic pairs a PRD with its technical design) |
 | How to write any of these | `docs/templates/` |
 
 Living documents (features, architecture) always describe the code on `main`. Records (specs, plans, ADRs, epics) are dated and never rewritten.
@@ -76,7 +77,9 @@ Onboarding a product repository:
 pnpm repo:add api git@github.com:acme/api.git --preset nest
 ```
 
-It then needs an architecture map (`docs/templates/REPO-ARCHITECTURE.md`) and a row in `docs/ARCHITECTURE.md`; `pnpm check` says exactly what is missing.
+It installs hooks and builds the knowledge graph. Then ask your agent to "onboard api": it drafts the architecture map from the graph and opens a hub PR for you to review. `pnpm check` says exactly what is still missing.
+
+Bringing a PRD? Give it to your agent with your technical design: it challenges both in a few rounds of questions, then writes the epic and its phases (`docs/WORKFLOW.md`, "Epics").
 
 ## Definition of done
 

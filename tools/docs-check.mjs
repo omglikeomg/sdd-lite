@@ -8,7 +8,7 @@ import { HUB_ROOT, DIRS, loadConfig, loadAdrs, loadAcDefinitions, loadWork, read
 import { splitFrontmatter, stripCode, codeSpans, links, headings, section } from './lib/markdown.mjs';
 import {
   SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, TEST_TITLE_AC_RE, isAcId,
-  parsePlanBranch, specPath,
+  parsePlanBranch, specPath, SLUG_RE, REQ_DEFINITION_RE, REQ_REF_RE,
 } from './lib/conventions.mjs';
 import { parsePlan } from './lib/plans.mjs';
 import { matchesAny, globToRegExp } from './lib/glob.mjs';
@@ -18,7 +18,7 @@ const SKIP_ANYWHERE = new Set(['.git', 'node_modules']);
 const SKIP_TOP = new Set(['repos', '.worktrees', 'graphify-out', '.superpowers']);
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
-  rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) ||
+  rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) ||
   ['docs/ARCHITECTURE.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
 
 export function allMarkdown(root) {
@@ -59,6 +59,8 @@ export function runChecks(root = HUB_ROOT) {
   checkAcceptanceCriteria(root, cfg, repoState, acDefs, err);
   checkCodeAdrRefs(root, cfg, repoState, adrs, err);
   checkArchitecture(root, cfg, repoState, texts, adrs, err);
+  checkContracts(root, cfg, files, texts, err);
+  checkEpics(root, files, texts, err);
   return errors;
 }
 
@@ -85,7 +87,7 @@ function checkFrontmatter(files, texts, repoNames, err) {
       err(rel, 1, 'frontmatter', `missing frontmatter (expected type: ${spec.type})`);
       continue;
     }
-    const allowed = new Set(['type', ...(spec.statuses ? ['status'] : []), ...(spec.paths ? ['paths'] : [])]);
+    const allowed = new Set(['type', ...(spec.statuses ? ['status'] : []), ...(spec.paths ? ['paths'] : []), ...(spec.extra || [])]);
     for (const k of Object.keys(fm.data)) if (!allowed.has(k)) err(rel, 1, 'frontmatter', `unknown field "${k}" (allowed: ${[...allowed].join(', ')})`);
     if (fm.data.type !== spec.type) err(rel, 1, 'frontmatter', `type must be "${spec.type}" here, found "${fm.data.type ?? ''}"`);
     if (spec.statuses && !spec.statuses.includes(fm.data.status)) {
@@ -111,7 +113,17 @@ function expectedFrontmatter(rel, repoNames) {
   if (parts[0] !== 'docs') return { none: true };
   const dir = parts.slice(0, -1).join('/');
   if (dir === DIRS.features) return { type: 'feature' };
-  if (dir === DIRS.epics) return { type: 'epic', statuses: SPEC_STATUSES };
+  if (parts[1] === 'epics') {
+    if (parts.length === 4 && SLUG_RE.test(parts[2])) {
+      if (base === 'README.md') return { type: 'epic', statuses: SPEC_STATUSES, extra: ['issue'] };
+      if (base === 'prd.md') return { type: 'prd' };
+    }
+    return { error: 'an epic lives in docs/epics/<slug>/ as README.md (the technical design) and prd.md (the product requirements)' };
+  }
+  if (dir === DIRS.contracts) {
+    if (!SLUG_RE.test(base.replace(/\.md$/, ''))) return { error: 'contracts are named <slug>.md' };
+    return { type: 'contract', extra: ['provider', 'consumers'] };
+  }
   if (dir === DIRS.specs) {
     if (!/^\d{6}-[a-z0-9]+(?:-[a-z0-9]+)*-design\.md$/.test(base)) return { error: 'design specs are named <6-digit id>-<slug>-design.md (allocate the id with `pnpm plan:new`)' };
     return { type: 'design', statuses: SPEC_STATUSES };
@@ -202,8 +214,33 @@ function checkAdrRefs(files, texts, adrs, err) {
 
 // ── specs and plans ─────────────────────────────────────────────────────────
 
+// A design spec, once approved, lists the living documents its work will change; once done, every
+// item is ticked and every document it names exists.
+function checkDocImpact(root, rel, err) {
+  const text = read(root, rel);
+  const status = splitFrontmatter(text).data.status;
+  if (!['approved', 'in-progress', 'done'].includes(status)) return;
+  const impact = section(text, 'Documentation impact');
+  if (!impact) {
+    err(rel, 1, 'doc-impact', 'approved specs need a "## Documentation impact" section listing the living documents the work changes (or "- None: <why>")');
+    return;
+  }
+  const lines = impact.text.split('\n');
+  const items = lines.filter((l) => /^- \[( |x|X)\]/.test(l));
+  if (items.length === 0 && !lines.some((l) => /^- None:/.test(l))) {
+    err(rel, impact.startLine, 'doc-impact', 'list each document as "- [ ] `docs/…`: what changes", or write "- None: <why>"');
+  }
+  if (status !== 'done') return;
+  items.forEach((l) => {
+    const line = impact.startLine + lines.indexOf(l);
+    if (!/^- \[(x|X)\]/.test(l)) err(rel, line, 'doc-impact', 'the work is done but this documentation item is not ticked: update the document, then tick it');
+    for (const m of l.matchAll(/`(docs\/[^`\s]+\.md)`/g)) if (!existsSync(join(root, m[1]))) err(rel, line, 'doc-impact', `\`${m[1]}\` does not exist`);
+  });
+}
+
 function checkWork(root, cfg, err) {
   for (const w of loadWork(root).values()) {
+    for (const sp of w.specs) checkDocImpact(root, sp.file, err);
     if (w.specs.length > 1) for (const s of w.specs.slice(1)) err(s.file, 1, 'ids', `ID ${w.id} is already used by ${w.specs[0].file}; renumber with \`pnpm plan:new\``);
     const spec = w.specs[0];
     for (const p of w.plans) {
@@ -385,6 +422,72 @@ function checkArchitecture(root, cfg, repoState, texts, adrs, err) {
         err(map, 1, 'architecture', `\`${hubPath}\` is a structural file (mustDocument) that no architecture doc mentions or covers with \`paths\``);
       }
     }
+  }
+}
+
+// ── contracts ───────────────────────────────────────────────────────────────
+
+function checkContracts(root, cfg, files, texts, err) {
+  const contracts = files.filter((f) => f.startsWith(`${DIRS.contracts}/`));
+  const system = texts.get('docs/ARCHITECTURE.md') || '';
+  const linked = new Set(links(system).map((l) => resolve(root, 'docs', l.target.split('#')[0])));
+  const repos = new Map(cfg.repos.map((r) => [r.name, r]));
+  for (const rel of contracts) {
+    const fm = splitFrontmatter(texts.get(rel)).data;
+    const consumers = Array.isArray(fm.consumers) ? fm.consumers : [];
+    const sides = [fm.provider, ...consumers].filter(Boolean);
+    if (!fm.provider || consumers.length === 0) err(rel, 1, 'contracts', 'contracts need `provider: <repo>` and a non-empty `consumers` list');
+    const cited = new Set(codeSpans(texts.get(rel)).map((c) => c.code.split('/')[1]).filter(Boolean));
+    for (const name of sides) {
+      if (!repos.has(name)) err(rel, 1, 'contracts', `"${name}" is not a repo in hub.config.json`);
+      else if (!cited.has(name)) err(rel, 1, 'contracts', `cite the code that implements this contract in ${name}, as a backticked \`repos/${name}/…\` path`);
+    }
+    if (!linked.has(resolve(root, rel))) err('docs/ARCHITECTURE.md', 1, 'contracts', `link ${rel} from "How the repositories interact"`);
+  }
+}
+
+// ── epics ───────────────────────────────────────────────────────────────────
+
+function checkEpics(root, files, texts, err) {
+  const epics = files.filter((f) => /^docs\/epics\/[^/]+\/README\.md$/.test(f));
+  for (const rel of epics) {
+    const dir = dirname(rel);
+    const prdRel = `${dir}/prd.md`;
+    const text = texts.get(rel);
+    const status = splitFrontmatter(text).data.status;
+    const reqs = new Set([...(texts.get(prdRel) || '').matchAll(REQ_DEFINITION_RE)].map((m) => m[1]));
+    if (!texts.has(prdRel)) err(rel, 1, 'epics', `missing ${prdRel}: store the product requirements next to the design`);
+    const map = section(text, 'Requirement map');
+    if (!map) err(rel, 1, 'epics', 'needs a "## Requirement map" section: every REQ-n of the PRD mapped to a phase or marked out of scope');
+    else {
+      const mapped = new Set(map.text.match(REQ_REF_RE) || []);
+      for (const r of reqs) if (!mapped.has(r)) err(rel, map.startLine, 'epics', `${r} from the PRD is not in the requirement map`);
+      for (const r of mapped) if (!reqs.has(r)) err(rel, map.startLine, 'epics', `${r} is not defined in ${prdRel}`);
+    }
+    const phases = section(text, 'Phases');
+    if (!phases) err(rel, 1, 'epics', 'needs a "## Phases" table');
+    else if (status === 'done') {
+      for (const row of phases.text.split('\n').filter((l) => /^\|\s*\d+\s*\|/.test(l))) {
+        const link = /\]\(([^)\s]+-design\.md)\)/.exec(row);
+        if (!link) {
+          err(rel, phases.startLine, 'epics', `the epic is done but phase "${row.split('|')[2]?.trim()}" links no design spec`);
+          continue;
+        }
+        const spec = resolve(root, dir, link[1]);
+        const st = existsSync(spec) ? splitFrontmatter(readFileSync(spec, 'utf8')).data.status : null;
+        if (!['done', 'abandoned'].includes(st)) err(rel, phases.startLine, 'epics', `the epic is done but ${link[1]} is "${st ?? 'missing'}"`);
+      }
+    }
+  }
+  // Specs that belong to an epic may only cite requirements that epic defines.
+  for (const rel of files.filter((f) => f.startsWith(`${DIRS.specs}/`))) {
+    const text = texts.get(rel);
+    const linksSec = section(text, 'Links');
+    const epicLink = linksSec && /- Epic:.*?\]\(([^)\s]+README\.md)\)/.exec(linksSec.text);
+    if (!epicLink) continue;
+    const prd = resolve(root, dirname(rel), dirname(epicLink[1]), 'prd.md');
+    const defined = new Set(existsSync(prd) ? [...readFileSync(prd, 'utf8').matchAll(REQ_DEFINITION_RE)].map((m) => m[1]) : []);
+    for (const r of new Set(stripCode(text).match(REQ_REF_RE) || [])) if (!defined.has(r)) err(rel, 1, 'epics', `${r} is not defined in the epic's prd.md`);
   }
 }
 

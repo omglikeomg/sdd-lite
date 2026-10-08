@@ -11,7 +11,7 @@ This repository is the hub: specs, decisions and plans for the product repositor
 ## Specs and plans (Architectural work)
 
 4. Get the ID and file paths from `pnpm plan:new <slug> --repos <names>`. Save the design spec and plans exactly at the printed paths; never invent an ID or use the date-based default names.
-5. Design specs follow `docs/templates/DESIGN-SPEC.md`; plans add the sections in `docs/templates/PLAN-ADDENDUM.md`.
+5. Design specs follow `docs/templates/DESIGN-SPEC.md`, including `## Documentation impact`: every living document (architecture maps, contracts, feature documents) the work will change. Plans add the sections in `docs/templates/PLAN-ADDENDUM.md`.
 6. Every plan commit step is `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>"`, plus `--trailer "Refs: <ids>"` when it implements ADRs or acceptance criteria.
 7. Tests that prove an acceptance criterion have a title starting with its ID: `it('CHECKOUT-PAY-1: …')`.
 8. Write an ADR only for the triggers in `docs/WORKFLOW.md` ("ADRs"). Never use ADRs as tasks.
@@ -25,7 +25,7 @@ This repository is the hub: specs, decisions and plans for the product repositor
 
 ## Documents
 
-13. Living documents (`docs/features/`, `docs/codebases/`, `docs/ARCHITECTURE.md`) must describe the code on `main`. Update them in the completion PR, not before; `pnpm plan:complete` moves acceptance criteria for you.
+13. Living documents (`docs/features/`, `docs/codebases/`, `docs/contracts/`, `docs/ARCHITECTURE.md`) must describe the code on `main`. Update them in the completion PR, not before: apply every item of the spec's Documentation impact and tick it; `pnpm plan:complete` moves acceptance criteria for you.
 14. Point at code with backticked hub-relative paths such as `` `repos/api/src/billing/billing.module.ts::BillingModule` ``; link documents with relative Markdown links.
 15. No placeholder text (`TBD`, `TODO`, `insert here`) in any document.
 16. `pnpm check` must pass before any hub commit. If it fails, fix the cause; never bypass hooks with `--no-verify`.
@@ -41,3 +41,8 @@ This repository is the hub: specs, decisions and plans for the product repositor
 20. When work starts from an issue, pass it: `plan:new … --issue <n>` for planned work, `work:start … --issue <n>` for a bug. Read the saved issue context before designing.
 21. Bounded commits explain themselves in labelled paragraphs (`Cause:` or `Rationale:`, `Fix:`, `Verification:`, optional `Risk:`); `work:pr` turns them into the PR's sections and the issue comment.
 22. Run `pnpm plan:abandon` only when your human partner decides the work stops, and pass their reason.
+
+## Epics and onboarding
+
+23. A PRD, product brief or outcome needing several pieces of work goes through the `epic-design` skill before any phase starts; onboarding a repository goes through the `onboard-repository` skill.
+24. Phases of an epic start one at a time, with `--epic <slug>`, and their acceptance criteria name the requirements they fulfil (`(REQ-2)`).

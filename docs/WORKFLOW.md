@@ -25,8 +25,9 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/ARCHITECTURE.md` | The system map: hub structure, product repositories, how they talk, evolution | living |
 | `docs/codebases/` | Per repository: `ARCHITECTURE.md` (the map) and `architecture/<area>.md` (areas that outgrew the map) | living |
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
+| `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
 | `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `README.md` | How to join and how to work | living |
-| `docs/epics/` | Outcomes that need more than one design spec | record |
+| `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
 | `docs/superpowers/plans/` | Implementation plans, one per repository, named `<id>-<slug>--<repo>.md` | record |
 | `docs/adr/` | Architecture decision records, `NNNN-<slug>.md` | record |
@@ -36,7 +37,31 @@ This file adds what neither provides: where documents live, how work is identifi
 
 Documents anywhere else under `docs/` fail `pnpm check`. That is deliberate: a new kind of document is a decision, and decisions get an ADR.
 
-**Living documents** are edited whenever the code they describe changes, and `pnpm check` verifies them against the code. **Records** are written once, approved, and afterwards only their `status` changes. They cannot decay because they never claim to describe the present.
+**Living documents** are edited whenever the code they describe changes, and `pnpm check` verifies them against the code. **Records** are written once, approved, and afterwards only their `status` changes (and, for a design spec, the ticks in its Documentation impact checklist). They cannot decay because they never claim to describe the present.
+
+## Who does what
+
+You talk to the agent in plain words ("start planned work on checkout payments", "onboard the api repository", "here is the PRD for faster checkout"). It picks the command; the `hub-workflow` skill maps every stage to one.
+
+| Step | Who |
+|---|---|
+| Classify the request, run the graph preflight, run `plan:new` / `epic:new` / `work:start`, write specs, plans and epic designs, run `plan:pr`, `plan:complete`, apply the Documentation impact | Agent, asking before anything leaves your machine (pushes, PRs, GitHub writes) |
+| Answer design questions, approve specs and epics, approve every push and PR, merge | You |
+| `plan:start`, then open a new agent session in the worktree it prints | You: an agent can run `plan:start`, but it cannot move its own session into the worktree |
+| Review an onboarding PR (architecture map drafted by the agent) | You, for what code cannot show: intent, owners, deployment |
+
+### Who sets each status
+
+| Document | Status | Set by |
+|---|---|---|
+| Design spec | `draft` | The agent, when it writes the spec |
+| | `approved` | The agent, when you approve the written spec (`plan:start` refuses anything else) |
+| | `done` | `pnpm plan:complete` |
+| | `abandoned` | `pnpm plan:abandon` |
+| Epic | `draft` → `approved` | The agent writes it as draft; set to approved when you approve it, before `epic:pr` |
+| | `in-progress`, `done`, `abandoned` | A person, in a hub PR (`epic:pr` writes the closing PR text once it is `done`) |
+| ADR | `proposed` → `accepted` → `superseded` | The author in the PR that adds it; accepting it also adds it to "Evolution" |
+| Spike note | `draft` → `done` | Its author |
 
 ## Work tiers
 
@@ -99,10 +124,10 @@ sequenceDiagram
   participant A as Agent
   participant H as Hub
   participant R as Product repo
-  P->>H: pnpm plan:new checkout-payments --repos api,web
-  H-->>P: ID 000042, branch docs/000042-checkout-payments-spec, file paths
   P->>A: describe the change
-  A->>H: graphify-preflight, brainstorming, design spec
+  A->>H: pnpm plan:new checkout-payments --repos api,web
+  H-->>A: ID 000042, branch docs/000042-checkout-payments-spec, file paths
+  A->>H: graphify-preflight, brainstorming, design spec with Documentation impact
   P->>A: approve the spec
   A->>H: writing-plans: one plan per repository
   P->>H: spec PR (title and body from pnpm plan:pr --spec), review, merge
@@ -113,20 +138,21 @@ sequenceDiagram
   end
   A->>R: push, PR (title and body from pnpm plan:pr --repo api)
   P->>R: review, squash merge
-  P->>H: pnpm plan:complete 000042
-  H-->>P: completion branch: ticked plan, rulings, criteria moved, pointers moved
-  P->>H: update architecture docs, pnpm check, completion PR, merge
+  A->>H: pnpm plan:complete 000042
+  H-->>A: completion branch: ticked plan, rulings, criteria moved, pointers moved
+  A->>H: apply the Documentation impact, pnpm check, completion PR
+  P->>H: review, merge
   P->>H: pnpm plan:cleanup 000042
 ```
 
 1. **Allocate.** `pnpm plan:new checkout-payments --repos api,web` fetches the hub, allocates the next ID, creates the branch `docs/000042-checkout-payments-spec` and prints the exact spec and plan paths.
-2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, and links to ADRs. A person approves it; set `status: approved`.
+2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. A person approves it; set `status: approved`.
 3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`.
 4. **Spec PR.** `pnpm check`, commit `docs(spec): 000042 checkout-payments`, push, and open the PR with the title and body from `pnpm plan:pr 000042 --spec`. The body leads with the goal and the behaviour in plain language, so non-engineers can review it. Merge; from here `main` shows the work as approved.
 5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
 6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. Review, then squash merge.
 7. **Complete.** When every repository's code PR is merged, `pnpm plan:complete 000042` creates `docs/000042-checkout-payments-completion`, ticks the plan checkboxes from the `Task:` footers, copies the agent's rulings from the `Ruling:` footers (and from the Superpowers ledger if a run left one), records the merge commits, moves the submodule pointers, moves the spec's acceptance criteria into the feature document named in its `## Links`, and sets the spec to `done`.
-8. **Completion PR.** `pnpm check` names any architecture document the new code needs; update it, commit `docs(completion): 000042 checkout-payments`, open the PR with `pnpm plan:pr 000042 --completion`, review, merge.
+8. **Completion PR.** The agent applies the spec's Documentation impact (it is printed by `plan:complete`) to the living documents and ticks each item; `pnpm check` refuses a done spec with an unticked item, and also names any structural file no architecture document covers. Commit `docs(completion): 000042 checkout-payments`, open the PR with `pnpm plan:pr 000042 --completion` (it lists the documentation updated), review, merge.
 9. **Clean up.** `pnpm plan:cleanup 000042` removes the worktrees and local branches once the completion PR is on `main`.
 
 Phase N+1 of an epic starts at step 1 only after phase N's completion PR is merged.
@@ -170,7 +196,9 @@ IDs look like `BILL-ISSUE-1`: uppercase segments ending in a number. They never 
 
 ### Design specs (records)
 
-The Superpowers design document, plus our additions: frontmatter (`type: design`, `status`), `## Context`, `## Acceptance criteria` for new or changed behaviour, and `## Links`. Acceptance criteria are defined here first; the completion PR copies them into `docs/features/`, because only then do they describe `main`.
+The Superpowers design document, plus our additions: frontmatter (`type: design`, `status`), `## Context`, `## Acceptance criteria` for new or changed behaviour, `## Documentation impact`, optional `## Manual steps`, and `## Links`. Acceptance criteria are defined here first; the completion PR copies them into `docs/features/`, because only then do they describe `main`.
+
+**Documentation impact** plans the living-document changes with the design, so they are reviewed in the spec PR instead of remembered at the end. Each item is a checkbox naming the document and what changes (`- [ ] \`docs/codebases/api/ARCHITECTURE.md\`: add the saved-card path`), or one line `- None: <why>`. The items are applied in the completion PR, when the documents describe `main`, and ticked there.
 
 Statuses: `draft`, `approved`, `in-progress`, `done`, `abandoned`. ADRs move from `proposed` to `accepted` to `superseded`.
 
@@ -205,9 +233,35 @@ Write an ADR only when at least one of these holds:
 
 Everything else belongs in the design spec. ADRs are never a unit of work and never a decomposition of an epic. Numbers are global across all repositories, four digits (Graphify only recognises up to five digits in citations), and the first heading is `# ADR-NNNN: <title>`. A superseded ADR keeps its file, changes `status` to `superseded`, and links its successor. Statuses: `proposed`, `accepted`, `superseded`.
 
-### Epics and spikes
+### Epics
 
-An epic states the outcome, success measures and an ordered list of phases, each a one-line headline that later links to its design spec. Spikes follow Superpowers (answer first, throwaway code); write a spike note only when the findings matter and no ADR records them.
+An epic is an outcome too big for one design spec: usually a PM's PRD plus an engineer's technical design. It lives in `docs/epics/<slug>/`:
+
+- `prd.md`: the product requirements in the PM's words, each marked with a stable ID (`**REQ-1**`, `**REQ-2**`, …);
+- `README.md`: the technical design that pairs with it: Outcome, **Requirement map** (every `REQ-n` to a phase, or out of scope with the reason), Architecture direction, Contracts, Decisions, Edge cases settled while designing, and **Phases**.
+
+```mermaid
+flowchart TD
+  prd[PRD from the PM + your technical design] --> new[pnpm epic:new slug --prd file]
+  new --> skill[epic-design skill: preflight, then up to 3 rounds of challenging questions]
+  skill --> write[README.md: requirement map, direction, phases]
+  write --> pr[pnpm epic:pr slug: PM and tech lead review, merge]
+  pr --> p1[Phase 1: pnpm plan:new … --epic slug, the normal architectural cycle]
+  p1 --> p2[Phase 2 starts after phase 1 completes]
+  p2 --> done[All phases done or abandoned: epic done, its issue closes]
+```
+
+1. **Start.** Give the agent the PRD and your design; it runs `pnpm epic:new <slug> --prd <file> [--issue <n>]`, which opens the branch `docs/epic-<slug>`, stores the PRD and, in GitHub mode, creates or adopts the epic's issue.
+2. **Challenge.** The `epic-design` skill grounds itself in the graph, numbers the requirements, then asks at most three rounds of up to five questions, each with its recommended answer: requirements first, then edge cases and failure modes, then phase boundaries, contracts and decisions. Nothing is written until you approve the summary.
+3. **Write and review.** It writes `README.md`; `pnpm check` verifies every requirement is mapped; `pnpm epic:pr <slug>` gives the PR text (in GitHub mode `--create` opens it and comments on the epic's issue). PM and tech lead review the direction and phases.
+4. **Phases.** Each phase starts only when the previous one is complete, as planned work (`pnpm plan:new <slug> --repos … --epic <epic>`) or bounded work. Its spec links the epic in `## Links` (`- Epic: [<epic>](../../epics/<epic>/README.md)`), its acceptance criteria name the requirements they fulfil (`(REQ-2)`), and the epic's Phases table gets its spec link. In GitHub mode its tracking issue becomes a sub-issue of the epic's issue, and its PRs carry the `epic:<slug>` label.
+5. **Done.** When every phase links a spec that is done or abandoned, set the epic to `done` in a hub PR; `pnpm epic:pr <slug>` then writes a closing PR text with `Closes #<epic issue>`.
+
+Requirements trace end to end: `REQ-2` → the phase's acceptance criteria → tests titled with those IDs → the code.
+
+### Spikes
+
+Spikes follow Superpowers (answer first, throwaway code); write a spike note only when the findings matter and no ADR records them.
 
 ## Plans
 
@@ -271,6 +325,16 @@ From most to least durable:
 
 Hub documents point at code with backticked hub-relative paths, optionally with a symbol: `` `repos/api/src/billing/billing.service.ts::BillingService` ``. Graphify turns these into `EXTRACTED` edges, so `graphify explain "BillingService"` lists every document that cites it.
 
+## Onboarding a repository
+
+Ask the agent to "onboard <name>". Its `onboard-repository` skill runs `pnpm repo:add` (which installs hooks and builds the knowledge graph with the new code in it), drafts `docs/codebases/<name>/ARCHITECTURE.md` from the graph and the code, writes or extends contracts with the other repositories, gets `pnpm check` green and proposes a hub PR on `chore/onboard-<name>`. A person reviews it: intent, owners, deployment and plans are often not in the code, and the agent lists what it could not tell.
+
+## Contracts
+
+`docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked paths. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
+
+Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (removing or retyping anything a consumer uses) needs an ADR and a release plan for both sides.
+
 ## Architecture documents
 
 - `docs/ARCHITECTURE.md` is the system map. Its `## Evolution` section links every accepted ADR in order; together with git history it is the record of how the architecture changed.
@@ -307,6 +371,9 @@ Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, 
 | `repos` | Every configured repository is a checked-out submodule, checked out at exactly the pointer the hub records |
 | `ac` | Each criterion is defined once in `docs/features/`, has a test titled with its ID, and every ID a test cites is defined |
 | `architecture` | Every repository has a map linked from `docs/ARCHITECTURE.md`; structural files are documented; area `paths` match real files; Evolution links every accepted ADR |
+| `doc-impact` | Approved specs have a Documentation impact list; done specs have every item ticked and every named document present |
+| `contracts` | Contracts name a configured provider and consumers, cite code in each, and are linked from `docs/ARCHITECTURE.md` |
+| `epics` | Each epic has `prd.md`; every `REQ-n` is in the requirement map and exists; a done epic links only done or abandoned specs; specs cite only requirements their epic defines |
 
 Templates in `docs/templates/` are exempt.
 
@@ -337,6 +404,8 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | `pnpm hub:setup` | Checks Node 20+, git 2.36+, Graphify 0.9.80+; checks out submodules; installs hooks; sets the hub's `submodule.recurse=true` and `push.recurseSubmodules=check` |
 | `pnpm doctor` | Read-only health check: versions, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
 | `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs] [--branch main]` | Adds a product repository as a submodule and configures it |
+| `pnpm epic:new <slug> [--prd <file>] [--issue <n>] [--title "…"]` | Starts an epic: branch `docs/epic-<slug>`, the PRD stored as `prd.md`, the epic's issue in GitHub mode |
+| `pnpm epic:pr <slug> [--create]` | The epic's design PR (or, once it is done, its closing PR); `--create` opens it and comments on the epic's issue |
 | `pnpm plan:new <slug> --repos <a,b> [--type feat] [--epic <slug>] [--issue <n>] [--title "…"]` | Allocates an ID (the tracking issue's number in GitHub mode), creates the spec branch, prints paths |
 | `pnpm plan:start <id> --repo <name> [--no-install]` | Creates or resumes the execution worktree from a fresh default branch, installs dependencies with the repository's own package manager (pnpm, npm or yarn, by lockfile), self-tests hooks, refreshes the graph |
 | `pnpm plan:status [id]` | Epics, specs and per-repository task progress |

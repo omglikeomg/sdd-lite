@@ -18,6 +18,8 @@
     "plan:cleanup": "node tools/plan.mjs cleanup",
     "plan:revert": "node tools/plan.mjs revert",
     "plan:abandon": "node tools/plan.mjs abandon",
+    "epic:new": "node tools/plan.mjs epic-new",
+    "epic:pr": "node tools/plan.mjs epic-pr",
     "work:start": "node tools/plan.mjs work-start",
     "work:pr": "node tools/plan.mjs work-pr",
     "work:cleanup": "node tools/plan.mjs work-cleanup",

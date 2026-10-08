@@ -83,10 +83,16 @@ export function taskNumbers(message) {
 const AC_BODY = '[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\\d+';
 export const AC_ID_RE = new RegExp(`^${AC_BODY}$`);
 export function isAcId(token) {
-  return AC_ID_RE.test(token) && !/^(ADR|RFC)-/.test(token);
+  return AC_ID_RE.test(token) && !/^(ADR|RFC|REQ)-/.test(token);
 }
+
+// Product requirements in an epic's PRD: **REQ-<n>**, numbered per epic.
+export const REQ_DEFINITION_RE = /\*\*(REQ-\d+)\*\*/g;
+export const REQ_REF_RE = /\bREQ-\d+\b/g;
 export const AC_DEFINITION_RE = new RegExp(`\\*\\*(${AC_BODY})\\*\\*`, 'g');
-export const TEST_TITLE_AC_RE = new RegExp(`\\b(?:it|test|describe)(?:\\.[A-Za-z]+)*\\(\\s*['"\`](${AC_BODY}):`, 'g');
+// A test title is a string literal opened right after "(": it('ID: …'), test.describe("ID: …"), and
+// the title call of table tests, it.each([...])('ID: %s …'), whose table may span several lines.
+export const TEST_TITLE_AC_RE = new RegExp(`\\(\\s*['"\`](${AC_BODY}):`, 'g');
 
 export const ADR_REF_RE = /\bADR-(\d{1,5})\b/g;
 export function adrLabel(num) {

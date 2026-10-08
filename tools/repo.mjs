@@ -3,7 +3,8 @@
 import { parseArgs } from 'node:util';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { HUB_ROOT, loadConfig, saveConfig, HubError } from './lib/hub.mjs';
+import { spawnSync } from 'node:child_process';
+import { HUB_ROOT, loadConfig, saveConfig, HubError, skipGraphify } from './lib/hub.mjs';
 import { git } from './lib/git.mjs';
 import { REPO_NAME_RE } from './lib/conventions.mjs';
 import { setupRepo } from './setup.mjs';
@@ -43,10 +44,14 @@ function add(args) {
   cfg.repos.push(repo);
   saveConfig(HUB_ROOT, cfg);
   console.log(`[repo] added ${path} (${values.branch}); hooks: ${setupRepo(HUB_ROOT, repo)}`);
-  console.log(`[repo] next:
-  1. Copy docs/templates/REPO-ARCHITECTURE.md to docs/codebases/${name}/ARCHITECTURE.md and describe ${path}.
-  2. Link it from the "Product repositories" table in docs/ARCHITECTURE.md.
-  3. Run \`pnpm check\` until it is green, then commit: chore(repos): add ${name}`);
+  if (!skipGraphify()) {
+    const r = spawnSync('graphify', ['update', '.'], { cwd: HUB_ROOT, encoding: 'utf8' });
+    if (r.status === 0) console.log(`[repo] knowledge graph built with ${path} in it (graphify update .)`);
+    else console.warn(`[repo] warning: \`graphify update .\` failed; run it before writing the architecture map:\n${(r.stderr || r.stdout).trim()}`);
+  }
+  console.log(`[repo] next: ask your agent to "onboard ${name}". Its onboard-repository skill drafts
+  docs/codebases/${name}/ARCHITECTURE.md from the graph, links it from docs/ARCHITECTURE.md, runs
+  \`pnpm check\`, and proposes the hub PR on chore/onboard-${name} for a person to review.`);
 }
 
 const [cmd, ...rest] = process.argv.slice(2);

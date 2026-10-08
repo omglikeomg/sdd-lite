@@ -132,6 +132,10 @@ Billing lives in \`repos/api/src/billing/billing.module.ts\`.
 
 - **CARD-PAY-1** When a customer pays with a saved card, the system shall charge that card.
 
+## Documentation impact
+
+- None: the test fixture changes no living document.
+
 ## Manual steps
 
 - Set \`CARD_VAULT_KEY\` in production before deploying.
@@ -257,4 +261,62 @@ test('bounded work from a bug issue: context in, explanation and PR back out', (
   assert.ok(issue(46).labels.includes('status:pending-review'));
   tool('plan.mjs', 'work-cleanup', 'api', 'fix/invoice-rounding');
   assert.ok(!existsSync(join(hub, '.worktrees', 'api--invoice-rounding.issue.md')));
+});
+
+test('epics in GitHub mode: adopted issue, design PR, phases as sub-issues, epic labels on PRs', () => {
+  const s = gh();
+  s.issues['acme/hub#60'] = { number: 60, title: 'PRD: faster repeat checkout', body: 'See attached PRD.', url: 'https://github.com/acme/hub/issues/60', state: 'OPEN', labels: ['kind:feature'], comments: [] };
+  s.next = 61;
+  writeFileSync(STATE, JSON.stringify(s));
+  git(hub, 'switch', '--quiet', 'main');
+  const prdFile = join(base, 'prd.md');
+  writeFileSync(prdFile, '# Faster checkout\n\n- **REQ-1** Reuse the last shipping address.\n');
+  tool('plan.mjs', 'epic-new', 'faster-checkout', '--prd', prdFile, '--issue', '60');
+  assert.ok(['tier:epic', 'epic:faster-checkout', 'status:ongoing'].every((l) => issue(60).labels.includes(l)));
+  assert.match(issue(60).comments.at(-1).body, /### Epic design started/);
+  write(join(hub, 'docs/epics/faster-checkout/README.md'), '---\ntype: epic\nstatus: approved\nissue: 60\n---\n# Faster checkout\n\n## Outcome\n\nReturning customers reuse their last address.\n\n## Requirement map\n\n| Requirement | Phase |\n|---|---|\n| REQ-1 | 1 |\n\n## Phases\n\n| # | Phase | Tier | Work | Status |\n|---|---|---|---|---|\n| 1 | Saved addresses | Architectural | not started | planned |\n');
+  git(hub, 'add', '-A');
+  git(hub, 'commit', '--quiet', '-m', 'docs(epic): faster-checkout');
+  const epicPr = tool('plan.mjs', 'epic-pr', 'faster-checkout', '--create');
+  const prKey = Object.keys(gh().prs).find((k) => gh().prs[k].head === 'docs/epic-faster-checkout');
+  assert.match(epicPr, /TITLE\ndocs\(epic\): faster-checkout/);
+  assert.deepEqual(gh().prs[prKey].labels, ['epic:faster-checkout']);
+  assert.match(gh().prs[prKey].body, /REQ-1[\s\S]*Saved addresses[\s\S]*Refs #60/);
+  assert.match(issue(60).comments.at(-1).body, /### Epic design ready for review[\s\S]*Saved addresses/);
+  assert.ok(issue(60).labels.includes('status:pending-review'));
+  gh_state_close(prKey);
+  git(hub, 'switch', '--quiet', 'main');
+  git(hub, 'merge', '--quiet', '--squash', 'docs/epic-faster-checkout');
+  git(hub, 'commit', '--quiet', '-m', 'docs(epic): faster-checkout (#62)');
+  git(hub, 'push', '--quiet', 'origin', 'main');
+
+  const out = tool('plan.mjs', 'new', 'saved-addresses', '--repos', 'api', '--epic', 'faster-checkout');
+  const phaseNo = Number(/allocated ID (\d{6})/.exec(out)[1]);
+  assert.match(out, new RegExp(`#${phaseNo} is a sub-issue of epic #60`));
+  assert.deepEqual(issue(60).subIssues, [phaseNo]);
+  assert.ok(issue(phaseNo).labels.includes('epic:faster-checkout'));
+
+  const id = String(phaseNo).padStart(6, '0');
+  write(join(hub, `docs/superpowers/specs/${id}-saved-addresses-design.md`), `---\ntype: design\nstatus: approved\n---\n# Saved addresses\n\n## Goal\n\nReuse the last address.\n\n## Acceptance criteria\n\n- **ADDR-1** When a returning customer checks out, the system shall offer their last address. (REQ-1)\n\n## Documentation impact\n\n- None: no living document changes.\n\n## Links\n\n- Epic: [faster-checkout](../../epics/faster-checkout/README.md)\n- Feature: \`docs/features/addresses.md\`\n`);
+  write(join(hub, `docs/superpowers/plans/${id}-saved-addresses--api.md`), `# Saved addresses (api) Implementation Plan\n\n**Goal:** Offer the last address.\n\n**Spec:** [design](../specs/${id}-saved-addresses-design.md)\n\n**Repo:** \`repos/api\`\n\n**Branch:** \`feat/${id}-saved-addresses\`\n\n---\n\n### Task 1: Last address\n\n- [ ] **Step 1: Test**\n`);
+  git(hub, 'add', '-A');
+  git(hub, 'commit', '--quiet', '-m', `docs(spec): ${id} saved-addresses`);
+  tool('plan.mjs', 'pr', id, '--spec', '--create');
+  const specPr = Object.values(gh().prs).find((p) => p.head === `docs/${id}-saved-addresses-spec`);
+  assert.deepEqual(specPr.labels, ['epic:faster-checkout']);
+  gh_state_close(`acme/hub#${specPr.number}`);
+  git(hub, 'switch', '--quiet', 'main');
+  git(hub, 'merge', '--quiet', '--squash', `docs/${id}-saved-addresses-spec`);
+  git(hub, 'commit', '--quiet', '-m', `docs(spec): ${id} saved-addresses (#${specPr.number})`);
+  git(hub, 'push', '--quiet', 'origin', 'main');
+
+  tool('plan.mjs', 'start', id, '--repo', 'api');
+  const wt = join(hub, '.worktrees', `api--${id}-saved-addresses`);
+  write(join(wt, 'src/billing/address.spec.ts'), "it('ADDR-1: offers the last address', () => {});\n");
+  git(wt, 'add', '-A');
+  git(wt, 'commit', '--quiet', '-m', 'feat(billing): offer the last address', '--trailer', 'Task: 1', '--trailer', 'Refs: ADDR-1');
+  tool('plan.mjs', 'pr', id, '--repo', 'api', '--create');
+  const codePr = Object.entries(gh().prs).find(([k, p]) => k.startsWith('acme/api#') && p.head === `feat/${id}-saved-addresses`)[1];
+  assert.deepEqual(codePr.labels, ['epic:faster-checkout']);
+  assert.ok(gh().labels['acme/api'].includes('epic:faster-checkout'), 'the epic label is created in the product repository');
 });

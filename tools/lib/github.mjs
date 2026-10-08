@@ -12,6 +12,7 @@ export const STATIC_LABELS = [
   { name: STATUS.manual, color: 'd93f0b', description: 'Shipped, but people must still do something (see the last comment)', owner: 'commands' },
   { name: 'tier:architectural', color: '5319e7', description: 'Planned work with a design spec', owner: 'commands' },
   { name: 'tier:bounded', color: 'c5def5', description: 'Small change to an existing flow', owner: 'commands' },
+  { name: 'tier:epic', color: '3e4b9e', description: 'An outcome delivered in phases; its sub-issues are the phases', owner: 'commands' },
   ...['feat', 'fix', 'refactor', 'perf', 'chore', 'docs'].map((t) => ({ name: `type:${t}`, color: 'bfdadc', description: `Conventional Commit type ${t}`, owner: 'commands' })),
   { name: 'breaking-change', color: 'b60205', description: 'Changes behaviour other code or clients rely on', owner: 'commands' },
   { name: 'kind:feature', color: 'a2eeef', description: 'Request for new behaviour', owner: 'issue forms' },
@@ -92,11 +93,22 @@ export function openPrFor(repo, head) {
 }
 
 // Opens the PR, or returns the open PR that already exists for `head` (a rerun after a failure).
-export function createPr(repo, { head, base, title, body }) {
+export function createPr(repo, { head, base, title, body, labels = [] }) {
   const open = JSON.parse(gh(['pr', 'list', '--repo', repo, '--head', head, '--state', 'open', '--json', 'number,url']) || '[]');
-  if (open.length) return { number: open[0].number, url: open[0].url, reused: true };
-  const url = gh(['pr', 'create', '--repo', repo, '--head', head, '--base', base, '--title', title, '--body-file', '-'], body);
+  if (open.length) {
+    if (labels.length) gh(['pr', 'edit', String(open[0].number), '--repo', repo, ...labels.flatMap((l) => ['--add-label', l])]);
+    return { number: open[0].number, url: open[0].url, reused: true };
+  }
+  const url = gh(['pr', 'create', '--repo', repo, '--head', head, '--base', base, '--title', title, '--body-file', '-', ...labels.flatMap((l) => ['--label', l])], body);
   return { number: numberFromUrl(url), url, reused: false };
+}
+
+// Make `child` a sub-issue of `parent` (both in `repo`). Returns false when GitHub refuses, for
+// example on plans without sub-issues; the epic label still groups the work.
+export function addSubIssue(repo, parent, child) {
+  const id = gh(['api', `repos/${repo}/issues/${child}`, '--jq', '.id']);
+  const r = spawnSync('gh', ['api', '-X', 'POST', `repos/${repo}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${id}`], { encoding: 'utf8' });
+  return r.status === 0 || /already/i.test(r.stderr || '');
 }
 
 export function editIssueBody(repo, number, body) {

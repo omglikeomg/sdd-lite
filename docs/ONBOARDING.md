@@ -29,7 +29,7 @@ graphify update .
 ## 2. Read three documents (15 minutes)
 
 1. `README.md`: what the hub is and the shape of a piece of work.
-2. `docs/ARCHITECTURE.md`: the system map. Follow the link to the map of the repository you will work in.
+2. `docs/ARCHITECTURE.md`: the system map. Follow the link to the map of the repository you will work in, and to the contracts it offers or consumes.
 3. `docs/WORKFLOW.md`: the rules. Skim it now; you will come back to "Branches and commits" and "What `pnpm check` enforces".
 
 Then skim the ADRs listed under "Evolution" in the architecture document. They are short and explain why things are the way they are.

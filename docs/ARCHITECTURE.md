@@ -41,6 +41,8 @@ flowchart LR
 | `hub.config.json` | Product repositories: path, default branch, test globs, structural files to document |
 | `.claude/skills/graphify-preflight/SKILL.md` | The context-gathering step every design starts with |
 | `.claude/skills/hub-workflow/SKILL.md` | Maps each stage of the work to the command that performs it |
+| `.claude/skills/onboard-repository/SKILL.md` | Drafts a new repository's architecture map from the knowledge graph |
+| `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in up to three rounds of questions, then writes the epic |
 
 The tools are plain Node.js modules with no dependencies, so the hub needs nothing installed beyond Node, git and Graphify.
 
@@ -59,7 +61,7 @@ No product repositories are onboarded yet. `pnpm repo:add` adds one as a submodu
 
 ## How the repositories interact
 
-Contracts between repositories (HTTP APIs, events, shared SST stages and resources) are described here as repositories are onboarded, each with the backticked paths of the code that defines both sides.
+Each interface between repositories (HTTP APIs, events, shared SST stages and resources) gets a contract in `docs/contracts/`, linked from here. None exist yet.
 
 ## Evolution
 

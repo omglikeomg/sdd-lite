@@ -50,9 +50,27 @@ if (noun === 'label' && verb === 'create') {
 } else if (noun === 'pr' && verb === 'list') {
   const open = Object.entries(state.prs).filter(([k, p]) => k.startsWith(`${repo}#`) && p.head === opt('--head') && p.state === 'OPEN');
   console.log(JSON.stringify(open.map(([, p]) => ({ number: p.number, url: `https://github.com/${repo}/pull/${p.number}` }))));
+} else if (noun === 'pr' && verb === 'edit') {
+  const p = state.prs[key(args[2])] || fail(`pr ${key(args[2])} not found`);
+  for (const l of all('--add-label')) {
+    if (!(state.labels[repo] || []).includes(l)) fail(`could not add label: '${l}' not found`);
+    if (!p.labels.includes(l)) p.labels.push(l);
+  }
+} else if (noun === 'api') {
+  const path = args.find((a) => a.startsWith('repos/'));
+  const m = /^repos\/([^/]+\/[^/]+)\/issues\/(\d+)(\/sub_issues)?$/.exec(path || '');
+  if (!m) fail(`fake gh: unsupported api path ${path}`);
+  const parent = state.issues[`${m[1]}#${m[2]}`] || fail(`issue ${m[1]}#${m[2]} not found`);
+  if (!m[3]) console.log(String(parent.number * 1000));
+  else {
+    const id = Number(String(args.find((a) => a.startsWith('sub_issue_id='))).split('=')[1]);
+    parent.subIssues = [...(parent.subIssues || []), id / 1000];
+    console.log('{}');
+  }
 } else if (noun === 'pr' && verb === 'create') {
   const n = state.next++;
-  state.prs[key(n)] = { number: n, state: 'OPEN', head: opt('--head'), base: opt('--base'), title: opt('--title'), body: stdin() };
+  for (const l of all('--label')) if (!(state.labels[repo] || []).includes(l)) fail(`could not add label: '${l}' not found`);
+  state.prs[key(n)] = { number: n, state: 'OPEN', head: opt('--head'), base: opt('--base'), title: opt('--title'), body: stdin(), labels: all('--label') };
   console.log(`https://github.com/${repo}/pull/${n}`);
 } else fail(`fake gh: unsupported command: ${args.join(' ')}`);
 save();

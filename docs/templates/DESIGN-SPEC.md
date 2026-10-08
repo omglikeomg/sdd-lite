@@ -48,7 +48,7 @@ Errors: provider declines map to HTTP 402 with the provider's reason; provider o
      several capabilities, group criteria under "### [Feature](link)" headings. Reuse the
      capability's prefix; never reuse a retired ID. -->
 
-- **CHECKOUT-PAY-6** When a signed-in customer pays an order with a saved card, the system shall charge that saved card through the payment provider using the order's idempotency key.
+- **CHECKOUT-PAY-6** When a signed-in customer pays an order with a saved card, the system shall charge that saved card through the payment provider using the order's idempotency key. (REQ-1)
 - **CHECKOUT-PAY-7** If the saved card has expired, then the system shall reject the payment with HTTP 422 before calling the payment provider.
 - **CHECKOUT-PAY-8** Where a customer has no saved cards, the checkout page shall show only the new-card form.
 
@@ -59,6 +59,17 @@ Errors: provider declines map to HTTP 402 with the provider's reason; provider o
 
 - Depends on [ADR-0012](../../adr/0012-idempotent-payment-calls.md).
 - Creates none: saved cards stay in the provider's vault, which is reversible and inside one module.
+
+## Documentation impact
+
+<!-- hub, required once approved: the living documents this work will change, one checkbox each,
+     reviewed with the design in the spec PR. They are updated in the completion PR, when they
+     describe main; tick each item then. `pnpm check` refuses a done spec with an unticked item.
+     Write "- None: <why>" when nothing changes. -->
+
+- [ ] `docs/codebases/api/ARCHITECTURE.md`: add the saved-card charge path to the payments module row
+- [ ] `docs/contracts/catalog-graphql.md`: add `customer.paymentMethods`
+- [ ] `docs/features/checkout-payments.md`: CHECKOUT-PAY-6 to 8 (moved by `pnpm plan:complete`)
 
 ## Manual steps
 
@@ -77,7 +88,7 @@ Errors: provider declines map to HTTP 402 with the provider's reason; provider o
 - Feature: [Checkout payments](../../features/checkout-payments.md)
   <!-- For a capability with no feature document yet, write the path in backticks instead,
        `docs/features/<name>.md`; pnpm plan:complete creates it and moves the criteria there. -->
-- Epic: [Faster repeat checkout](../../epics/faster-repeat-checkout.md)
+- Epic: [faster-repeat-checkout](../../epics/faster-repeat-checkout/README.md)
 - Plans: `docs/superpowers/plans/000042-checkout-payments--api.md`, `docs/superpowers/plans/000042-checkout-payments--web.md`
   <!-- Backticked paths, not links: the spec is written before its plans exist. Each plan links back
        to this spec, which gives Graphify the edge. -->

@@ -153,7 +153,7 @@ test('plan:new allocates 000001 and the spec branch; hand-ticked boxes are rejec
   const out = tool('plan.mjs', 'new', 'checkout-payments', '--repos', 'api,web');
   assert.match(out, /000001/);
   assert.equal(git(hub, 'branch', '--show-current').trim(), 'docs/000001-checkout-payments-spec');
-  write(join(hub, 'docs/superpowers/specs/000001-checkout-payments-design.md'), `---\ntype: design\nstatus: approved\n---\n# Checkout payments: design\n\n## Context\n\nBilling exists in \`repos/api/src/billing/billing.service.ts\`.\n\n## Acceptance criteria\n\n- **CHECKOUT-PAY-1** When a customer confirms an order, the system shall charge the card.\n- **CHECKOUT-PAY-2** If the card is declined, then the system shall show the decline reason.\n\n## Links\n\n- Feature: \`docs/features/checkout-payments.md\` (new)\n`);
+  write(join(hub, 'docs/superpowers/specs/000001-checkout-payments-design.md'), `---\ntype: design\nstatus: approved\n---\n# Checkout payments: design\n\n## Context\n\nBilling exists in \`repos/api/src/billing/billing.service.ts\`.\n\n## Acceptance criteria\n\n- **CHECKOUT-PAY-1** When a customer confirms an order, the system shall charge the card.\n- **CHECKOUT-PAY-2** If the card is declined, then the system shall show the decline reason.\n\n## Documentation impact\n\n- [ ] \`docs/codebases/api/ARCHITECTURE.md\`: document the payments module\n\n## Links\n\n- Feature: \`docs/features/checkout-payments.md\` (new)\n`);
   write(join(hub, 'docs/superpowers/plans/000001-checkout-payments--api.md'), PLAN('api', 'feat/000001-checkout-payments', ['Charge the card', 'Payments module']));
   write(join(hub, 'docs/superpowers/plans/000001-checkout-payments--web.md'), PLAN('web', 'feat/000001-checkout-payments', ['Decline message']));
   const apiPlan = join(hub, 'docs/superpowers/plans/000001-checkout-payments--api.md');
@@ -228,7 +228,14 @@ test('plan:complete refuses before merge, then completes with rulings from foote
   const apiSha = squashMerge(apiBare, 'feat/000001-checkout-payments', 'feat(payments): checkout payments (#11)', 'Checkout by card.');
   const webPr = tool('plan.mjs', 'pr', '000001', '--repo', 'web');
   assert.match(webPr, /^Ruling: reused the generic error banner/m, 'plan:pr carries rulings into the squash body');
-  squashMerge(webBare, 'feat/000001-checkout-payments', 'feat(checkout): decline message (#7)', webPr.split('BODY\n')[1]);
+  // web merges with a merge commit, not a squash: the pointer must land on the merge commit.
+  const webMergeDir = join(base, 'merge-web-mergecommit');
+  git(base, 'clone', '--quiet', webBare, webMergeDir);
+  git(webMergeDir, 'commit', '--quiet', '--allow-empty', '-m', 'chore: unrelated work lands first');
+  git(webMergeDir, 'merge', '--quiet', '--no-ff', 'origin/feat/000001-checkout-payments', '-m', 'Merge pull request #7 from feat/000001-checkout-payments');
+  git(webMergeDir, 'push', '--quiet', 'origin', 'main');
+  const webMerge = git(webMergeDir, 'rev-parse', 'HEAD').trim();
+  void webPr;
   // The web branch disappears everywhere (as when GitHub deletes it on merge): the ruling must
   // survive through the squash commit alone.
   const web = join(hub, 'repos/web');
@@ -248,9 +255,10 @@ test('plan:complete refuses before merge, then completes with rulings from foote
   assert.match(apiPlan, /- kept a single charge method/, "ruling from an unfinished run's ledger");
   assert.match(apiPlan, new RegExp(`\\*\\*Merged:\\*\\* \`repos/api@${apiSha.slice(0, 12)}\``));
   assert.match(readFileSync(join(hub, 'docs/superpowers/plans/000001-checkout-payments--web.md'), 'utf8'), /- reused the generic error banner/,
-    'with branch and worktree gone, the ruling survives in the squash commit');
+    'with branch and worktree gone, the ruling survives in the merged commits');
   assert.match(readFileSync(join(hub, 'docs/superpowers/specs/000001-checkout-payments-design.md'), 'utf8'), /status: done/);
   assert.equal(git(join(hub, 'repos/api'), 'rev-parse', 'HEAD').trim(), apiSha, 'submodule pointer moved to the merge');
+  assert.equal(git(join(hub, 'repos/web'), 'rev-parse', 'HEAD').trim(), webMerge, 'with a merge commit, the pointer lands on it, not on the branch tip');
   const feature = readFileSync(join(hub, 'docs/features/checkout-payments.md'), 'utf8');
   assert.match(feature, /^type: feature$/m);
   assert.match(feature, /## Acceptance criteria\n\n- \*\*CHECKOUT-PAY-1\*\*[^\n]*\n- \*\*CHECKOUT-PAY-2\*\*/, 'criteria moved from the spec');
@@ -263,6 +271,9 @@ test('completion PR: check requires the new module documented, then passes', () 
   assert.match(check(), /repos\/api\/src\/payments\/payments\.module\.ts.*structural file/);
   const map = join(hub, 'docs/codebases/api/ARCHITECTURE.md');
   writeFileSync(map, readFileSync(map, 'utf8') + '- `repos/api/src/payments/payments.module.ts`: charges cards.\n');
+  assert.match(check(), /\[doc-impact\].*not ticked/, 'the planned documentation update must be ticked once applied');
+  const spec = join(hub, 'docs/superpowers/specs/000001-checkout-payments-design.md');
+  writeFileSync(spec, readFileSync(spec, 'utf8').replace('- [ ] `docs/codebases/api/ARCHITECTURE.md`', '- [x] `docs/codebases/api/ARCHITECTURE.md`'));
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
   git(hub, 'add', '-A');
   git(hub, 'commit', '--quiet', '-m', 'docs(completion): 000001 checkout-payments');
@@ -348,4 +359,53 @@ test('plan:abandon refuses shipped work and drops an unmerged design', () => {
   toolFails('plan.mjs', 'abandon', '000002');
   const out = tool('plan.mjs', 'abandon', '000002', '--reason', 'refunds move to the payment provider');
   assert.match(out, /never reached main[\s\S]*git branch -D docs\/000002-refunds-spec/);
+});
+
+test('contracts must cite code on both sides and be linked from the system map', () => {
+  git(hub, 'switch', '--quiet', 'main');
+  const contract = join(hub, 'docs/contracts/billing-api.md');
+  write(contract, '---\ntype: contract\nprovider: api\nconsumers: [web]\n---\n# Billing API\n\nInvoices are issued by `repos/api/src/billing/billing.service.ts::BillingService`.\n');
+  let out = check();
+  assert.match(out, /\[contracts\].*cite the code that implements this contract in web/);
+  assert.match(out, /\[contracts\].*link docs\/contracts\/billing-api\.md/);
+  writeFileSync(contract, readFileSync(contract, 'utf8') + '\nThe web app shows them from `repos/web/app/(shop)/layout.tsx`.\n');
+  const arch = join(hub, 'docs/ARCHITECTURE.md');
+  const archBefore = readFileSync(arch, 'utf8');
+  writeFileSync(arch, archBefore.replace('## Evolution', '## How the repositories interact\n\n- [Billing API](contracts/billing-api.md)\n\n## Evolution'));
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
+  rmSync(contract);
+  writeFileSync(arch, archBefore);
+});
+
+test('epics: the PRD is stored, every requirement mapped, phases cite only known requirements', () => {
+  const prdFile = join(base, 'prd-input.md');
+  writeFileSync(prdFile, '# Faster checkout\n\n## Requirements\n\n- **REQ-1** Pay with a saved card.\n- **REQ-2** Reuse the last address.\n');
+  const out = tool('plan.mjs', 'epic-new', 'faster-checkout', '--prd', prdFile);
+  assert.match(out, /docs\/epics\/faster-checkout\/README\.md/);
+  assert.equal(git(hub, 'branch', '--show-current').trim(), 'docs/epic-faster-checkout');
+  assert.match(readFileSync(join(hub, 'docs/epics/faster-checkout/prd.md'), 'utf8'), /^---\ntype: prd\n---\n# Faster checkout/);
+  const readme = join(hub, 'docs/epics/faster-checkout/README.md');
+  const epic = (map, status = 'approved', phaseLink = 'not started') => `---\ntype: epic\nstatus: ${status}\n---\n# Faster checkout\n\n## Outcome\n\nRepeat customers check out faster.\n\n## Requirement map\n\n| Requirement | Phase |\n|---|---|\n${map}\n\n## Phases\n\n| # | Phase | Tier | Work | Status |\n|---|---|---|---|---|\n| 1 | Saved cards | Architectural | ${phaseLink} | planned |\n\n## Links\n\n- [prd.md](prd.md)\n`;
+  write(readme, epic('| REQ-1 | 1 |'));
+  assert.match(check(), /\[epics\].*REQ-2 from the PRD is not in the requirement map/);
+  write(readme, epic('| REQ-1 | 1 |\n| REQ-2 | Out of scope: later epic |'));
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
+  write(readme, epic('| REQ-1 | 1 |\n| REQ-2 | Out of scope: later epic |', 'done'));
+  assert.match(check(), /\[epics\].*the epic is done but phase "Saved cards" links no design spec/);
+  write(readme, epic('| REQ-1 | 1 |\n| REQ-2 | Out of scope: later epic |'));
+  git(hub, 'add', '-A');
+  git(hub, 'commit', '--quiet', '-m', 'docs(epic): faster-checkout');
+  git(hub, 'switch', '--quiet', 'main');
+  git(hub, 'merge', '--quiet', '--squash', 'docs/epic-faster-checkout');
+  git(hub, 'commit', '--quiet', '-m', 'docs(epic): faster-checkout (#5)');
+  git(hub, 'push', '--quiet', 'origin', 'main');
+
+  assert.match(tool('plan.mjs', 'new', 'saved-cards', '--repos', 'api', '--epic', 'faster-checkout'), /000003[\s\S]*- Epic: \[faster-checkout\]\(\.\.\/\.\.\/epics\/faster-checkout\/README\.md\)/);
+  toolFails('plan.mjs', 'new', 'nope', '--repos', 'api', '--epic', 'missing-epic');
+  write(join(hub, 'docs/superpowers/specs/000003-saved-cards-design.md'), '---\ntype: design\nstatus: draft\n---\n# Saved cards\n\n## Acceptance criteria\n\n- **CARD-1** When a customer pays with a saved card, the system shall charge it. (REQ-9)\n\n## Links\n\n- Epic: [faster-checkout](../../epics/faster-checkout/README.md)\n- Feature: `docs/features/cards.md`\n');
+  assert.match(check(), /\[epics\].*REQ-9 is not defined in the epic's prd\.md/);
+  const spec = join(hub, 'docs/superpowers/specs/000003-saved-cards-design.md');
+  writeFileSync(spec, readFileSync(spec, 'utf8').replace('(REQ-9)', '(REQ-1)'));
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
+  assert.match(tool('plan.mjs', 'status'), /epic   faster-checkout  \[approved\]  1 phase\(s\)/);
 });

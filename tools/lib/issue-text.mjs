@@ -81,6 +81,30 @@ ${issue.body || '(no description)'}
 ${comments ? `\n## Comments\n\n${comments}\n` : ''}`;
 }
 
+export function epicIssueBody({ slug }) {
+  return `**Epic \`${slug}\`**
+
+This issue follows an outcome delivered in phases. Its design lives in \`docs/epics/${slug}/README.md\` (being written on branch \`docs/epic-${slug}\`), next to the product requirements in \`docs/epics/${slug}/prd.md\`. Each phase becomes planned work with its own sub-issue.`;
+}
+
+export function epicStartedComment({ slug }) {
+  return `### Epic design started
+
+The requirements and the technical design are being reviewed together as epic \`${slug}\`. The next comment will summarise the agreed design and its phases.`;
+}
+
+export function epicReadyComment({ outcome, phases, prUrl }) {
+  return `### Epic design ready for review
+
+${outcome}
+
+**Phases**
+
+${phases || '- None listed yet.'}
+
+Design PR: ${prUrl}. Approving it agrees the direction; every phase still gets its own design review.`;
+}
+
 export function abandonedComment({ id, reason, closed, recorded }) {
   return `### Abandoned
 

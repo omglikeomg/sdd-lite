@@ -18,6 +18,9 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | You are about to… | Run (from the hub root) | Then |
 |---|---|---|
 | Design anything | `graphify-preflight` skill, then `superpowers:brainstorming` | Brainstorming classifies the tier |
+| Onboard a product repository | `onboard-repository` skill (it runs `pnpm repo:add`, which builds the graph) | A person reviews the drafted map in the hub PR |
+| Turn a PRD or large outcome into an epic | `epic-design` skill (it runs `pnpm epic:new <slug> --prd <file>`) | Up to three rounds of questions before writing; then `pnpm epic:pr <slug>` |
+| Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
 | Start **trivial** or **bounded** work | `pnpm work:start <repo> <type>/<slug> [--issue <n>]` | Work in the printed worktree; with `--issue`, read the saved issue context first |
 | Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths |
 | Open the spec PR | `pnpm check`, commit `docs(spec): <id> <slug>`, `pnpm plan:pr <id> --spec [--create]` | Ask your human partner before `--create` or any push |
@@ -26,7 +29,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | Open a code PR | `superpowers:finishing-a-development-branch` → "Push and create a Pull Request": `pnpm plan:pr <id> --repo <name> --create` in GitHub mode, otherwise its printed text | Never merge locally |
 | Open a bounded PR | `pnpm work:pr <repo> <type>/<slug> [--create]` | Sections come from the commit body's `Cause:`/`Rationale:`, `Fix:`, `Verification:` paragraphs; it explains the fix on the issue it came from |
 | See progress | `pnpm plan:status [id]` | Never tick plan checkboxes by hand |
-| Close planned work after code PRs merged | `pnpm plan:complete <id>` | Fix what `pnpm check` reports, then `pnpm plan:pr <id> --completion [--create]` |
+| Close planned work after code PRs merged | `pnpm plan:complete <id>` | Apply and tick the printed Documentation impact, `pnpm check`, then `pnpm plan:pr <id> --completion [--create]` |
 | Tidy up after the completion PR merged | `pnpm plan:cleanup <id>` | |
 | Tidy up after bounded work merged | `pnpm work:cleanup <repo> <type>/<slug>` | |
 | Undo merged work that failed QA | `pnpm plan:revert <id>` | It only prints; show the commands and wait for approval |

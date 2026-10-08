@@ -16,6 +16,7 @@ export const DIRS = {
   epics: 'docs/epics',
   spikes: 'docs/spikes',
   codebases: 'docs/codebases',
+  contracts: 'docs/contracts',
   templates: 'docs/templates',
 };
 

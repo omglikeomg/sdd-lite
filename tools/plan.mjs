@@ -14,10 +14,10 @@ import { criteriaByFeature, criteriaBlocks, mergeCriteria, newFeatureDoc } from 
 import { explanationSections, fixPrBody, featurePrBody } from './lib/pr-text.mjs';
 import { matchesAny } from './lib/glob.mjs';
 import {
-  STATUS, requireGh, parseIssueRef, openPrFor, closeIssue, closePr, removeLabels, ensureLabels, epicLabel, createIssue, viewIssue, comment, addLabels, setStatus, createPr, editIssueBody as gh_editBody,
+  STATUS, requireGh, parseIssueRef, openPrFor, closeIssue, closePr, removeLabels, addSubIssue, ensureLabels, epicLabel, createIssue, viewIssue, comment, addLabels, setStatus, createPr, editIssueBody as gh_editBody,
 } from './lib/github.mjs';
 import {
-  trackingIssueBody, adoptedComment, abandonedComment, specReadyComment, codeReadyComment, completionComment, boundedStartedComment, boundedReadyComment, issueContext,
+  trackingIssueBody, adoptedComment, abandonedComment, epicIssueBody, epicStartedComment, epicReadyComment, specReadyComment, codeReadyComment, completionComment, boundedStartedComment, boundedReadyComment, issueContext,
 } from './lib/issue-text.mjs';
 
 const root = HUB_ROOT;
@@ -87,7 +87,8 @@ function cmdNew(args) {
   const repos = (values.repos || '').split(',').filter(Boolean);
   if (repos.length === 0) throw new HubError('--repos is required (comma-separated repo names from hub.config.json)');
   repos.forEach((r) => repoConfig(cfg, r));
-  if (values.epic && !existsSync(join(root, DIRS.epics, `${values.epic}.md`))) throw new HubError(`no epic ${DIRS.epics}/${values.epic}.md`);
+  const epicRel = values.epic ? `${DIRS.epics}/${values.epic}/README.md` : null;
+  if (epicRel && !existsSync(join(root, epicRel))) throw new HubError(`no epic ${epicRel}; start one with pnpm epic:new ${values.epic}`);
   const g = github(cfg);
   if (values.issue && !g) throw new HubError('--issue needs GitHub mode (pnpm gh:setup)');
   requireCleanHub();
@@ -120,6 +121,11 @@ function cmdNew(args) {
     setStatus(g.hubRepo, number, STATUS.ongoing);
     if (values.issue) comment(g.hubRepo, number, adoptedComment({ id, slug, repos }), 'design-started');
     else gh_editBody(g.hubRepo, number, trackingIssueBody({ id, slug, repos, type: values.type }));
+    const epicIssue = epicRel && Number(splitFrontmatter(read(root, epicRel)).data.issue);
+    if (epicIssue) {
+      if (addSubIssue(g.hubRepo, epicIssue, number)) log(`GitHub: #${number} is a sub-issue of epic #${epicIssue}`);
+      else console.warn(`[plan] warning: GitHub refused to make #${number} a sub-issue of #${epicIssue}; the epic:${values.epic} label still groups them`);
+    }
     log(`GitHub: issue ${g.hubRepo}#${number} tracks this work`);
   } else id = nextId(base);
 
@@ -139,7 +145,7 @@ ${repos.map((r) => `  Plan for ${r} (writing-plans writes it here):  ${planPath(
   Give these exact paths to superpowers:brainstorming and superpowers:writing-plans.
   Open the spec PR when the spec (status: approved) and plans pass \`pnpm check\`:
     git commit -m "docs(spec): ${id} ${slug}"
-    pnpm plan:pr ${id} --spec${g ? ' --create' : ''}`);
+    pnpm plan:pr ${id} --spec${g ? ' --create' : ''}${epicRel ? `\n  Link the spec to its epic in "## Links": - Epic: [${values.epic}](../../epics/${values.epic}/README.md)` : ''}`);
 }
 
 // ── start ───────────────────────────────────────────────────────────────────
@@ -257,8 +263,11 @@ function cmdStatus(args) {
   const cfg = loadConfig(root);
   const rows = [];
   const epics = existsSync(join(root, DIRS.epics)) ? readdirSync(join(root, DIRS.epics)) : [];
-  for (const rel of epics.filter((f) => f.endsWith('.md'))) {
-    rows.push(`epic   ${rel.replace(/\.md$/, '')}  [${splitFrontmatter(read(root, `${DIRS.epics}/${rel}`)).data.status}]`);
+  for (const slug of epics.filter((f) => existsSync(join(root, DIRS.epics, f, 'README.md')))) {
+    const text = read(root, `${DIRS.epics}/${slug}/README.md`);
+    const phases = section(text, 'Phases');
+    const rowsN = phases ? phases.text.split('\n').filter((l) => /^\|\s*\d+\s*\|/.test(l)).length : 0;
+    rows.push(`epic   ${slug}  [${splitFrontmatter(text).data.status}]  ${rowsN} phase(s)`);
   }
   for (const w of [...loadWork(root).values()].sort((a, b) => a.id.localeCompare(b.id))) {
     if (only && w.id !== only) continue;
@@ -285,6 +294,12 @@ function cmdStatus(args) {
 }
 
 // ── complete ────────────────────────────────────────────────────────────────
+
+function docImpactTodo(specText) {
+  const impact = section(specText, 'Documentation impact');
+  const items = impact ? impact.text.split('\n').filter((l) => /^- \[ \]/.test(l)) : [];
+  return items.length ? items.map((l) => `    ${l}`).join('\n') : '    (none)';
+}
 
 function cmdComplete(args) {
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { defer: { type: 'string', default: '' }, merged: { type: 'string', multiple: true, default: [] } } });
@@ -333,7 +348,7 @@ function cmdComplete(args) {
     const ledger = join(root, '.worktrees', worktreeDirName(p.repo, id, slug), '.superpowers', 'sdd', n.replace(/\.md$/, ''), 'progress.md');
     const ledgerRulings = existsSync(ledger) ? rulingsFromLedger(readFileSync(ledger, 'utf8')).map((r) => r.replace(/^Ruling:\s*/, '')) : [];
     const rulings = [...footerRulings, ...ledgerRulings.filter((r) => !footerRulings.includes(r))];
-    return { rel, text, plan, repo, repoDir, done, merged, rulings };
+    return { rel, text, plan, repo, repoDir, done, merged, rulings, defaultRef: progress.defaultRef };
   });
 
   const specRel = specPath(id, slug);
@@ -354,7 +369,10 @@ function cmdComplete(args) {
   const date = new Date().toISOString().slice(0, 10);
   for (const w of work) {
     const doneTasks = new Set(w.plan.tasks.filter((t) => !deferred.has(t.number)).map((t) => t.number));
-    const newest = w.merged[0];
+    // The pointer goes to the commit that brought the work into the default branch's first-parent
+    // history: the squash commit itself, or the merge commit when PRs were merged with one.
+    const introducing = w.merged.map((m) => gitTry(w.repoDir, ['rev-list', '--first-parent', '--ancestry-path', `${m.sha}..${w.defaultRef}`]).out.split('\n').filter(Boolean).pop() || m.sha);
+    const newest = { sha: introducing.find((c) => introducing.every((o) => isAncestor(w.repoDir, o, c))) || introducing[0] };
     const body = tickTasks(w.text, doneTasks).replace(/\s*$/, '\n\n') + completionSection({
       date,
       merged: [...w.merged].reverse().map((m) => ({ path: w.repo.path, sha: m.sha, subject: m.subject })),
@@ -380,9 +398,11 @@ function cmdComplete(args) {
   graphifyUpdate();
   console.log(`
   The hub is on ${branch} with plans, spec status, acceptance criteria and submodule pointers staged.
+  Documentation impact still to apply (from the spec; tick each item in ${specRel} once done):
+${docImpactTodo(read(root, specRel))}
   Before committing:
-    1. pnpm check  (it names any architecture document the new code needs)
-    2. Update docs/codebases/<repo>/ARCHITECTURE.md or area docs until the check passes.
+    1. Apply the items above to the living documents and tick them.
+    2. pnpm check  (it also names any structural file no architecture document covers)
     3. git commit -m "docs(completion): ${id} ${slug}"
     4. pnpm plan:pr ${id} --completion   for the PR title and body.
   After the completion PR is merged: pnpm plan:cleanup ${id}`);
@@ -549,6 +569,13 @@ function printPr(title, body) {
   console.log(`TITLE\n${title}\n\nBODY\n${body.trim()}\n`);
 }
 
+// The epic a spec belongs to, from its "- Epic: [..](../../epics/<slug>/README.md)" link.
+function epicOf(specText) {
+  const l = section(specText, 'Links');
+  const m = l && /- Epic:.*?\]\([^)]*epics\/([a-z0-9-]+)\/README\.md\)/.exec(l.text);
+  return m ? m[1] : null;
+}
+
 const isBreaking = (header) => /^[a-z]+(\([^)]*\))?!:/.test(header);
 
 function requireRepoSlug(repo) {
@@ -587,7 +614,9 @@ function cmdPr(args) {
     const current = git(root, ['branch', '--show-current']);
     if (current !== expectedBranch) throw new HubError(`switch the hub to ${expectedBranch} first (it is on ${current})`);
     git(root, ['push', '--quiet', '-u', 'origin', expectedBranch]);
-    const pr = createPr(g.hubRepo, { head: expectedBranch, base: cfg.defaultBranch, title, body });
+    const epic = epicOf(specText);
+    if (epic) ensureLabels(g.hubRepo, [epicLabel(epic)]);
+    const pr = createPr(g.hubRepo, { head: expectedBranch, base: cfg.defaultBranch, title, body, labels: epic ? [`epic:${epic}`] : [] });
     log(`GitHub: ${pr.reused ? 'reusing the open PR' : 'opened'} ${pr.url}`);
     afterCreate(pr);
   };
@@ -636,7 +665,7 @@ ${lines.join('\n')}
 
 ${criteriaText}
 ${manualSteps ? `\n## Manual steps still needed\n\n${manualSteps}\n` : ''}
-Plans, rulings and merge commits are recorded in each plan's \`## Completion\` section.${g ? `\n\nCloses #${issueNo}` : ''}`, (pr) => {
+${(() => { const i = section(specText, 'Documentation impact'); return i && i.text.trim() ? `## Documentation updated\n\n${i.text.trim()}\n\n` : ''; })()}Plans, rulings and merge commits are recorded in each plan's \`## Completion\` section.${g ? `\n\nCloses #${issueNo}` : ''}`, (pr) => {
       comment(g.hubRepo, issueNo, completionComment({ shipped, criteria: criteria.length ? criteriaText : '', rulings, deferred, manualSteps, prUrl: pr.url }), 'shipped');
       setStatus(g.hubRepo, issueNo, manualSteps || deferred.length ? STATUS.manual : STATUS.review);
     });
@@ -676,7 +705,9 @@ Plans, rulings and merge commits are recorded in each plan's \`## Completion\` s
   if (!values.create) return;
   const wt = join(root, '.worktrees', worktreeDirName(repo.name, id, slug));
   git(existsSync(wt) ? wt : repoDir, ['push', '--quiet', '-u', 'origin', plan.branch]);
-  const pr = createPr(requireRepoSlug(repo), { head: plan.branch, base: repo.defaultBranch, title, body });
+  const epic = epicOf(specText);
+  if (epic) ensureLabels(requireRepoSlug(repo), [epicLabel(epic)]);
+  const pr = createPr(requireRepoSlug(repo), { head: plan.branch, base: repo.defaultBranch, title, body, labels: epic ? [`epic:${epic}`] : [] });
   log(`GitHub: ${pr.reused ? 'reusing the open PR' : 'opened'} ${pr.url}`);
   comment(g.hubRepo, issueNo, codeReadyComment({ repo: repo.name, goal: planGoal, prUrl: pr.url, tasks: taskList, rulings }), `code-ready:${repo.name}`);
   // One issue tracks every repository: it is pending review only once each repository's code is
@@ -836,12 +867,107 @@ function cmdAbandon(args) {
   Remote branches, if any were pushed, stay until you delete them on GitHub.`);
 }
 
+// ── epics ───────────────────────────────────────────────────────────────────
+
+function cmdEpicNew(args) {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { issue: { type: 'string' }, title: { type: 'string' }, prd: { type: 'string' } } });
+  const [slug] = positionals;
+  if (!slug || !SLUG_RE.test(slug)) throw new HubError('usage: pnpm epic:new <slug> [--prd <file>] [--issue <n>] [--title "<issue title>"]');
+  const cfg = loadConfig(root);
+  const g = github(cfg);
+  if (values.issue && !g) throw new HubError('--issue needs GitHub mode (pnpm gh:setup)');
+  const dir = `${DIRS.epics}/${slug}`;
+  if (values.prd && !existsSync(values.prd)) throw new HubError(`no PRD file ${values.prd}`);
+  requireCleanHub();
+  const base = freshBase(root, cfg.defaultBranch);
+  if (existsSync(join(root, dir)) || gitTry(root, ['cat-file', '-e', `${base}:${dir}/README.md`]).ok) throw new HubError(`epic ${slug} already exists`);
+
+  let number = null;
+  if (g) {
+    ensureLabels(g.hubRepo, [epicLabel(slug)]);
+    if (values.issue) {
+      const ref = parseIssueRef(values.issue, g.hubRepo);
+      if (ref.repo !== g.hubRepo) throw new HubError(`epic issues live in the hub repository ${g.hubRepo}`);
+      number = ref.number;
+      viewIssue(g.hubRepo, number);
+    } else {
+      number = createIssue(g.hubRepo, values.title || slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()), epicIssueBody({ slug })).number;
+    }
+    addLabels(g.hubRepo, number, ['tier:epic', `epic:${slug}`]);
+    setStatus(g.hubRepo, number, STATUS.ongoing);
+    comment(g.hubRepo, number, epicStartedComment({ slug }), 'epic-started');
+    log(`GitHub: issue ${g.hubRepo}#${number} tracks epic ${slug}`);
+  }
+
+  const branch = `docs/epic-${slug}`;
+  git(root, ['switch', '--quiet', '--no-track', '-c', branch, base]);
+  syncSubmodules();
+  mkdirSync(join(root, dir), { recursive: true });
+  if (values.prd) {
+    const raw = readFileSync(values.prd, 'utf8');
+    const fm = splitFrontmatter(raw);
+    const body = fm.has ? raw.split('\n').slice(fm.bodyStartLine - 1).join('\n') : raw;
+    writeFileSync(join(root, dir, 'prd.md'), `---\ntype: prd\n---\n${body.replace(/^\n+/, '')}`);
+    log(`stored the PRD as ${dir}/prd.md`);
+  }
+  log(`switched the hub to ${branch}`);
+  console.log(`
+  Epic design (the epic-design skill writes it):  ${dir}/README.md${number ? `   (frontmatter: issue: ${number})` : ''}
+  Product requirements:                            ${dir}/prd.md${values.prd ? '   (stored; requirements still need **REQ-n** IDs)' : ''}
+
+  Next: ask your agent to run the epic-design skill on the PRD and your technical design.
+  When pnpm check passes: git commit -m "docs(epic): ${slug}"   then   pnpm epic:pr ${slug}${g ? ' --create' : ''}`);
+}
+
+function cmdEpicPr(args) {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { create: { type: 'boolean', default: false } } });
+  const [slug] = positionals;
+  if (!slug || !SLUG_RE.test(slug)) throw new HubError('usage: pnpm epic:pr <slug> [--create]');
+  const cfg = loadConfig(root);
+  const rel = `${DIRS.epics}/${slug}/README.md`;
+  const text = hubFile(rel, cfg);
+  const fm = splitFrontmatter(text).data;
+  const outcome = section(text, 'Outcome');
+  const map = section(text, 'Requirement map');
+  const phases = section(text, 'Phases');
+  const done = fm.status === 'done';
+  const title = done ? `docs(epic): complete ${slug}` : `docs(epic): ${slug}`;
+  const issueLine = fm.issue && cfg.github?.enabled ? `\n\n${done ? 'Closes' : 'Refs'} #${fm.issue}` : '';
+  const body = `## Outcome
+
+${outcome ? outcome.text.trim() : '(no Outcome section)'}
+
+## Requirement map
+
+${map ? map.text.trim() : '(no Requirement map section)'}
+
+## Phases
+
+${phases ? phases.text.trim() : '(no Phases section)'}
+
+${done ? 'Every phase is complete or abandoned; this closes the epic.' : 'Approving this PR agrees the direction and the phases. Each phase still gets its own design spec and review when it starts (`pnpm plan:new … --epic ' + slug + '`).'}${issueLine}`;
+  printPr(title, body);
+  if (!values.create) return;
+  const g = github(cfg);
+  if (!g) throw new HubError('--create needs GitHub mode (pnpm gh:setup)');
+  const current = git(root, ['branch', '--show-current']);
+  if (!current.startsWith(`docs/epic-${slug}`)) throw new HubError(`switch the hub to the epic's branch (docs/epic-${slug}…) first`);
+  git(root, ['push', '--quiet', '-u', 'origin', current]);
+  ensureLabels(g.hubRepo, [epicLabel(slug)]);
+  const pr = createPr(g.hubRepo, { head: current, base: cfg.defaultBranch, title, body, labels: [`epic:${slug}`] });
+  log(`GitHub: ${pr.reused ? 'reusing the open PR' : 'opened'} ${pr.url}`);
+  if (fm.issue && !done) {
+    comment(g.hubRepo, Number(fm.issue), epicReadyComment({ outcome: outcome ? outcome.text.trim() : '', phases: phases ? phases.text.trim() : '', prUrl: pr.url }), 'epic-ready');
+    setStatus(g.hubRepo, Number(fm.issue), STATUS.review);
+  }
+}
+
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
 const [cmd, ...rest] = process.argv.slice(2);
 const commands = {
   new: cmdNew, start: cmdStart, status: cmdStatus, complete: cmdComplete, pr: cmdPr, cleanup: cmdCleanup, revert: cmdRevert, abandon: cmdAbandon,
-  'work-start': cmdWorkStart, 'work-pr': cmdWorkPr, 'work-cleanup': cmdWorkCleanup,
+  'work-start': cmdWorkStart, 'work-pr': cmdWorkPr, 'work-cleanup': cmdWorkCleanup, 'epic-new': cmdEpicNew, 'epic-pr': cmdEpicPr,
 };
 try {
   if (!commands[cmd]) throw new HubError(`unknown command "${cmd}"; see the Commands table in docs/WORKFLOW.md`);

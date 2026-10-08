@@ -28,4 +28,4 @@ Do not offer saved cards to guests. The 90-day deletion makes the feature unreli
 
 ## Links
 
-- Epic: [Faster repeat checkout](../epics/faster-repeat-checkout.md)
+- Epic: [Faster repeat checkout](../epics/faster-repeat-checkout/README.md)
