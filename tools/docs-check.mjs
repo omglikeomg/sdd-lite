@@ -18,7 +18,7 @@ const SKIP_ANYWHERE = new Set(['.git', 'node_modules']);
 const SKIP_TOP = new Set(['repos', '.worktrees', '.reviews', 'graphify-out', '.superpowers']);
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
-  rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) ||
+  rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) || rel.startsWith(`${DIRS.patterns}/`) ||
   ['docs/ARCHITECTURE.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
 
 export function allMarkdown(root) {
@@ -65,6 +65,7 @@ export function runChecks(root = HUB_ROOT) {
   checkCodeAdrRefs(root, cfg, repoState, adrs, err);
   checkArchitecture(root, cfg, repoState, texts, adrs, err);
   checkContracts(root, cfg, files, texts, err);
+  checkPatterns(files, texts, err);
   checkEpics(root, files, texts, err);
   return errors;
 }
@@ -128,6 +129,10 @@ function expectedFrontmatter(rel, repoNames) {
   if (dir === DIRS.contracts) {
     if (!SLUG_RE.test(base.replace(/\.md$/, ''))) return { error: 'contracts are named <slug>.md' };
     return { type: 'contract', extra: ['provider', 'consumers'] };
+  }
+  if (dir === DIRS.patterns) {
+    if (!SLUG_RE.test(base.replace(/\.md$/, ''))) return { error: 'patterns are named <slug>.md' };
+    return { type: 'pattern' };
   }
   if (dir === DIRS.specs) {
     if (!/^\d{6}-[a-z0-9]+(?:-[a-z0-9]+)*-design\.md$/.test(base)) return { error: 'design specs are named <6-digit id>-<slug>-design.md (allocate the id with `pnpm plan:new`)' };
@@ -448,6 +453,15 @@ function checkContracts(root, cfg, files, texts, err) {
       else if (!cited.has(name)) err(rel, 1, 'contracts', `cite the code that implements this contract in ${name}, as a backticked \`repos/${name}/…\` path`);
     }
     if (!linked.has(resolve(root, rel))) err('docs/ARCHITECTURE.md', 1, 'contracts', `link ${rel} from "How the repositories interact"`);
+  }
+}
+
+// ── patterns ────────────────────────────────────────────────────────────────
+
+function checkPatterns(files, texts, err) {
+  for (const rel of files.filter((f) => f.startsWith(`${DIRS.patterns}/`))) {
+    const rules = section(texts.get(rel), 'Rules');
+    if (!rules || !/^\s*(?:[-*]|\d+\.)\s+\S/m.test(rules.text)) err(rel, 1, 'patterns', 'a pattern needs a `## Rules` section with at least one rule as a list item');
   }
 }
 

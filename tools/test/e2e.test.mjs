@@ -237,10 +237,21 @@ test('review:start prepares a PR for review with its plan, rulings, criteria and
   const cfg = JSON.parse(cfgText);
   cfg.repos.find((r) => r.name === 'web').reviewGuidelines = ['docs/codebases/web/review.md'];
   writeFileSync(cfgFile, JSON.stringify(cfg, null, 2));
+  // The web map says new code follows a pattern; a pattern must state its rules.
+  const pattern = join(hub, 'docs/patterns/feature-folders.md');
+  const webMap = join(hub, 'docs/codebases/web/ARCHITECTURE.md');
+  const webMapText = readFileSync(webMap, 'utf8');
+  write(pattern, '---\ntype: pattern\n---\n# Feature folders\n\nCode is grouped by feature.\n');
+  writeFileSync(webMap, `${webMapText}\n## Patterns\n\nNew code follows [Feature folders](../../patterns/feature-folders.md).\n`);
+  assert.match(check(), /docs\/patterns\/feature-folders\.md:1 +\[patterns\]/);
+  write(pattern, '---\ntype: pattern\n---\n# Feature folders\n\n## Rules\n\n1. Group code by feature — because type folders hide where a feature lives.\n');
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
   try {
     tool('review.mjs', 'start', 'web', '7');
   } finally {
     writeFileSync(cfgFile, cfgText);
+    writeFileSync(webMap, webMapText);
+    rmSync(join(hub, 'docs/patterns'), { recursive: true });
   }
   const wt = join(hub, '.worktrees/web--review-7');
   assert.equal(git(wt, 'rev-parse', 'HEAD').trim(), git(webBare, 'rev-parse', 'refs/pull/7/head').trim(), "the worktree is at the PR's head");
@@ -252,6 +263,7 @@ test('review:start prepares a PR for review with its plan, rulings, criteria and
   assert.match(ctx, /\| CHECKOUT-PAY-1 \| no \| none in web \|/);
   assert.match(ctx, /`docs\/codebases\/web\/ARCHITECTURE\.md`: the repository's map/);
   assert.match(ctx, /`docs\/codebases\/web\/review\.md`: missing/);
+  assert.match(ctx, /`docs\/patterns\/feature-folders\.md`: a pattern new code here follows \(Feature folders\)/);
   assert.match(readFileSync(join(hub, '.reviews/web-7/pr.diff'), 'utf8'), /\+test\('CHECKOUT-PAY-2/);
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'review notes are not hub documents');
   tool('review.mjs', 'cleanup', 'web', '7');

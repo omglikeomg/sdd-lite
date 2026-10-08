@@ -89,6 +89,7 @@ Then follow `docs/ONBOARDING.md`.
 |---|---|
 | How the system fits together | `docs/ARCHITECTURE.md`, then each repository's map in `docs/codebases/` |
 | How the repositories talk to each other | `docs/contracts/` |
+| How we build a given kind of thing | `docs/patterns/` (optional; the maps say which ones each repository follows) |
 | What the product does, and how we know it works | `docs/features/`: acceptance criteria, each proven by a test titled with its ID |
 | Why something was decided | `docs/adr/`, listed in order under "Evolution" in the architecture document |
 | What a piece of work set out to do | `docs/superpowers/specs/` (design) and `docs/superpowers/plans/` (tasks) |

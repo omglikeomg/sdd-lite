@@ -19,7 +19,7 @@ Create a todo for each item and complete them in order.
 
 1. **Refresh.** From the hub root run `graphify update .`. Paste the last line of its output. If it fails, stop and report it; do not query a stale graph.
 2. **Documents pending?** If `graphify-out/needs_update` exists and the work is Architectural, tell your human partner that document changes are not yet in the graph and ask whether to run `/graphify . --update` (it calls an LLM and costs tokens). Continue either way, noting the answer.
-3. **Read the maps.** `docs/ARCHITECTURE.md`, the `docs/codebases/<repo>/ARCHITECTURE.md` of every repository the request touches, and any area document whose name matches the domain.
+3. **Read the maps.** `docs/ARCHITECTURE.md`, the `docs/codebases/<repo>/ARCHITECTURE.md` of every repository the request touches, any area document whose name matches the domain, and every pattern in `docs/patterns/` those documents cite: new code follows them.
 4. **Query.** Two to four questions in the request's own words, for example:
    - `graphify query "how are invoices issued"`
    - `graphify explain "BillingService"` for every concrete class, module or route named in the request
@@ -38,6 +38,9 @@ Document layer: up to date | pending (human chose to skip the LLM pass)
 
 **Existing code to reuse or extend**
 - `repos/api/src/billing/billing.service.ts::BillingService` issues invoices; extend it instead of a new service.
+
+**Patterns to follow**
+- `docs/patterns/idempotent-message-handlers.md`: the new consumer records its key in the same transaction as the invoice.
 
 **Constraints**
 - ADR-0004 (immutable invoices): refunds create credit notes, never edit an invoice.

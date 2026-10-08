@@ -3,12 +3,12 @@
 // See "Reviewing pull requests" in docs/WORKFLOW.md.
 import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { HUB_ROOT, DIRS, loadConfig, repoConfig, loadWork, loadAdrs, loadAcDefinitions, HubError, skipGraphify, read, mdFiles } from './lib/hub.mjs';
 import { git, gitTry, freshBase, showFile, hasRemote, logMessages } from './lib/git.mjs';
 import { parsePlanBranch, footerValues, taskNumbers, specPath, adrLabel, ADR_REF_RE, TEST_TITLE_AC_RE, isAcId } from './lib/conventions.mjs';
-import { splitFrontmatter, section } from './lib/markdown.mjs';
+import { splitFrontmatter, section, links } from './lib/markdown.mjs';
 import { parsePlan } from './lib/plans.mjs';
 import { splitCriteria } from './lib/features.mjs';
 import { globToRegExp, matchesAny } from './lib/glob.mjs';
@@ -116,6 +116,14 @@ function governingAreas(repo, files) {
   return areas;
 }
 
+// Patterns a document links to, as hub-relative paths.
+function patternsCitedBy(rel) {
+  if (!existsSync(join(root, rel))) return [];
+  return links(read(root, rel))
+    .map((l) => posix.normalize(posix.join(posix.dirname(rel), l.target.split('#')[0])))
+    .filter((p) => p.startsWith(`${DIRS.patterns}/`) && existsSync(join(root, p)));
+}
+
 function contractsOf(repo) {
   return mdFiles(root, DIRS.contracts).flatMap((rel) => {
     const fm = splitFrontmatter(read(root, rel)).data;
@@ -199,10 +207,12 @@ function cmdStart(args) {
     if (plan) cite(hubDoc(specPath(id, plan.slug), cfg), 'the design spec');
   }
   const map = `${DIRS.codebases}/${repo.name}/ARCHITECTURE.md`;
+  const patterns = [...new Set([map, ...areas.map((a) => a.rel)].flatMap(patternsCitedBy))];
   const docs = [
     existsSync(join(root, map)) ? `- ${code(map)}: the repository's map, its invariants first` : `- ${code(map)} does not exist: the repository is not onboarded`,
     ...areas.map((a) => `- ${code(a.rel)}: covers ${a.files.map(code).join(', ')}`),
     ...contracts.map((c) => `- ${code(c.rel)}: ${c.role}`),
+    ...patterns.map((p) => `- ${code(p)}: a pattern new code here follows (${titleOf(read(root, p))})`),
     ...[...cites].map(([label, where]) => {
       const adr = adrs.get(label);
       return adr ? `- ${label} ${code(adr.file)} (${adr.status}): ${titleOf(read(root, adr.file)).replace(/^ADR-\d+:\s*/, '')}; cited in ${[...where].join(', ')}`

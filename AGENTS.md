@@ -13,7 +13,7 @@ This repository is the hub: specs, decisions and plans for the product repositor
 
 5. Classify every request (Trivial, Bounded, Architectural, Epic) and say the classification out loud. When in doubt, the heavier tier.
 6. Brainstorming's "Explore project context" step is the `graphify-preflight` skill. Never claim knowledge of the code from the graph without running `graphify update .` first in this session.
-7. Reuse before building: if the preflight finds a module that does the job, the design extends it or explains in the spec why it cannot.
+7. Reuse before building: if the preflight finds a module that does the job, the design extends it or explains in the spec why it cannot. New code follows the patterns its repository's map cites (`docs/patterns/`); a design that departs from one says why in the spec.
 8. A PRD, product brief or outcome needing several pieces of work goes through the `epic-design` skill before any phase starts. Onboarding a repository goes through the `onboard-repository` skill, and reviewing someone else's pull request through the `review-pull-request` skill.
 9. When work starts from an issue, pass it: `plan:new … --issue <n>` for planned work, `work:start … --issue <n>` for a bug. Read the saved issue context before designing.
 

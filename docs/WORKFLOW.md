@@ -26,6 +26,7 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/codebases/` | Per repository: `ARCHITECTURE.md` (the map) and `architecture/<area>.md` (areas that outgrew the map) | living |
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
 | `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
+| `docs/patterns/` | How the team builds one kind of thing (a consumer, a controller, a frontend feature), as rules with their reasons | living |
 | `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `docs/PR_REVIEW.md`, `README.md` | How to join, how to work and how to review | living |
 | `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
@@ -344,6 +345,18 @@ The skill reviews through the lenses you choose and drafts each comment in two p
 
 Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (removing or retyping anything a consumer uses) needs an ADR and a release plan for both sides.
 
+## Patterns
+
+A pattern says how the team builds one kind of thing, as rules an agent can follow and a reviewer can check: "derive the idempotency key from the message's business identity, never the delivery ID — because a redelivered message gets a new delivery ID". It lives in `docs/patterns/<slug>.md`, from `docs/templates/PATTERN.md`, and stays short (50 to 100 lines): only real opinions, each with its reason, plus the one example that is easy to get wrong and the greppable signs of code that predates it. Where a lint rule, a type or a test can enforce a rule, set the tool up as well.
+
+Patterns are optional; the kit ships none. Repository maps connect them to code: a `## Patterns` section says which patterns new code follows and lists known deviations by path. From there:
+
+- the preflight reads the cited patterns, so a new module starts from them instead of being reinvented, and a design that departs from one says why in the spec;
+- onboarding records which patterns a repository follows and where its code deviates, which doubles as a tech-debt list;
+- reviews get a Patterns lens for every pattern the changed files' documents cite.
+
+Adding or changing a pattern is a hub PR a person approves. It needs an ADR only when it reverses a direction existing code relies on.
+
 ## Architecture documents
 
 - `docs/ARCHITECTURE.md` is the system map. Its `## Evolution` section links every accepted ADR in order; together with git history it is the record of how the architecture changed.
@@ -381,6 +394,7 @@ Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, 
 | `ac` | Each criterion is defined once in `docs/features/`, has a test titled with its ID, and every ID a test cites is defined |
 | `architecture` | Every repository has a map linked from `docs/ARCHITECTURE.md`; structural files are documented; area `paths` match real files; Evolution links every accepted ADR |
 | `doc-impact` | Approved specs have a Documentation impact list; done specs have every item ticked and every named document present |
+| `patterns` | Each pattern has a `## Rules` section with at least one rule |
 | `contracts` | Contracts name a configured provider and consumers, cite code in each, and are linked from `docs/ARCHITECTURE.md` |
 | `epics` | Each epic has `prd.md`; every `REQ-n` is in the requirement map and exists; a done epic links only done or abandoned specs; specs cite only requirements their epic defines |
 

@@ -52,7 +52,7 @@ Running it again after the author pushes moves the worktree to the new head and 
 |---|---|
 | Commits, changed files | What the PR contains; which files are tests |
 | The work this PR belongs to | Planned work: the spec, the plan, tasks with and without commits, the Review Focus, the rulings, and each criterion with the tests that cite it. A bug fix (GitHub mode): the issue it fixes, with its comments. Neither: a note to ask what the PR is for |
-| Documents that govern the changed code | The repository map, covering area documents, contracts, and ADRs cited by the diff, those areas or the spec |
+| Documents that govern the changed code | The repository map, covering area documents, the patterns they cite, contracts, and ADRs cited by the diff, those areas or the spec |
 | Acceptance criteria cited by the changed tests | Each ID with where the hub defines it; an undefined ID is flagged |
 | Team guidelines | Your team's review guidelines for this repository, and the risk checklist every review runs |
 
@@ -65,6 +65,7 @@ The agent reads the whole diff and every listed document, queries the graph, and
 | **Intent** | Does the PR do what was approved (or what the issue or description says), every Review Focus item included, and nothing more? Are the rulings acceptable? |
 | **Proof** | Is every criterion it implements proven by a test titled with its ID? Do the tests prove the behaviour, or only touch it? |
 | **Architecture** | Does it respect the invariants, the area documents and the ADRs? Does it reuse what exists or rebuild it? |
+| **Patterns** | Does new code follow the patterns the repository's map cites (`docs/patterns/`)? Does it touch a known deviation, and leave it better or worse? |
 | **Contracts** | Does it break a consumer, or rely on something the provider does not promise? |
 | **Risk** | Security, performance, concurrency, failure handling, compatibility, operability: the checklist in `.claude/skills/review-pull-request/risk-checklist.md` |
 | **Team guideline** | One lens per guideline your team listed for the repository |

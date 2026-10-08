@@ -44,6 +44,14 @@ flowchart LR
 - **Auth:** every route requires a session unless decorated with `@Public()`.
 - **Observability:** structured JSON logs; card numbers and tokens are redacted by the logger (CHECKOUT-PAY-4).
 
+## Patterns
+
+New code follows [Idempotent message handlers](../../patterns/idempotent-message-handlers.md) in every consumer, and [REST controllers](../../patterns/rest-controllers.md) in every HTTP module.
+
+Known deviations, to bring in line when the code is next changed substantially:
+
+- `repos/api/src/legacy-sync/` predates idempotent handlers: a redelivered message re-sends its email.
+
 ## Invariants
 
 - Only the payments module talks to the payment provider.
