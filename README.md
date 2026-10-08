@@ -2,7 +2,7 @@
 
 The hub is where our product is explained. The code lives in product repositories (NestJS API, Next.js web, SST infrastructure), checked out here as git submodules under `repos/`. Everything that says **what** the product does, **why** it is built the way it is, and **how** a change gets made lives in this repository.
 
-New here? Follow `docs/ONBOARDING.md`. The rules are in `docs/WORKFLOW.md`. Issues, labels and PRs on GitHub are optional and explained in `docs/GITHUB.md`.
+New here? Follow `docs/ONBOARDING.md`, then read `docs/EXAMPLES.md`: four pieces of work on an example product, step by step. The rules are in `docs/WORKFLOW.md`. Issues, labels and PRs on GitHub are optional and explained in `docs/GITHUB.md`.
 
 ## Why it exists
 

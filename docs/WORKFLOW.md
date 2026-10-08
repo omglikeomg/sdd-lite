@@ -7,7 +7,7 @@ The method combines two things:
 - **[Superpowers](https://github.com/obra/superpowers)** supplies the discipline: brainstorm before building, classify the work, write specs and plans, execute with TDD and review. We use its skills unchanged.
 - **[Graphify](https://github.com/Graphify-Labs/graphify)** supplies memory: one knowledge graph over every product repository and every document in this hub, so design starts from what already exists.
 
-This file adds what neither provides: where documents live, how work is identified across repositories, and checks that keep documents and code honest with each other.
+This file adds what neither provides: where documents live, how work is identified across repositories, and checks that keep documents and code honest with each other. `docs/EXAMPLES.md` follows four pieces of work through these rules, step by step.
 
 ## Principles
 
@@ -26,7 +26,7 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/codebases/` | Per repository: `ARCHITECTURE.md` (the map) and `architecture/<area>.md` (areas that outgrew the map) | living |
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
 | `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
-| `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `README.md` | How to join and how to work | living |
+| `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `README.md` | How to join and how to work | living |
 | `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
 | `docs/superpowers/plans/` | Implementation plans, one per repository, named `<id>-<slug>--<repo>.md` | record |
@@ -113,7 +113,7 @@ That rule protects quality; it is not a preference for ceremony. When a change g
 
    Use `Cause:` for a bug and `Rationale:` for any other change; `Context:` and `Risk:` are optional.
 5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Risk, footers); with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
-6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR). If structure changed, update the repository's architecture docs.
+6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR; add a new criterion before committing the code, because the commit hook only accepts `Refs:` IDs the hub defines). If structure changed, update the repository's architecture docs. Once the code PR is merged, that hub PR also moves the repository's submodule pointer to it (`git -C repos/api fetch && git -C repos/api checkout --detach origin/main && git add repos/api`), so `pnpm check` sees the code the documents now describe. Bounded work that changes no document leaves the pointer alone; the next completion moves it.
 7. `pnpm work:cleanup api fix/login-redirect` removes the worktree and local branch.
 
 ### Architectural work
