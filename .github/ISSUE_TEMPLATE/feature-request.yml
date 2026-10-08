@@ -1,0 +1,36 @@
+name: Feature request
+description: Ask for new behaviour. Describe the problem; the team designs the solution.
+labels: ["kind:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for writing this up. Focus on the problem and how we will know it is solved; engineers will turn it into a design and comment here at each step.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Describe what people cannot do today, or what is slow, confusing or costly.
+      placeholder: Returning customers retype their card details on every order, and about one in five give up at that step.
+    validations:
+      required: true
+  - type: input
+    id: who
+    attributes:
+      label: Who has this problem?
+      placeholder: Returning customers on web checkout
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: How will we know it worked?
+      description: A measurable change or an observable behaviour.
+      placeholder: Payment-step abandonment for returning customers drops below 8 %.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints, deadlines or related work
+      placeholder: Must ship before the November campaign. Card data must stay with the payment provider.

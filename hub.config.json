@@ -1,0 +1,8 @@
+{
+  "defaultBranch": "main",
+  "github": {
+    "enabled": false,
+    "hubRepo": null
+  },
+  "repos": []
+}

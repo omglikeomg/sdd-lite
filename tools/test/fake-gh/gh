@@ -1,0 +1,3 @@
+#!/bin/sh
+# Test stand-in for the GitHub CLI; see fake-gh.cjs.
+exec node "$(dirname "$0")/fake-gh.cjs" "$@"

@@ -1,0 +1,28 @@
+{
+  "name": "hub",
+  "private": true,
+  "description": "Specs, decisions and plans for the product repositories checked out under repos/",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "hub:setup": "node tools/setup.mjs",
+    "check": "node tools/docs-check.mjs",
+    "repo:add": "node tools/repo.mjs add",
+    "plan:new": "node tools/plan.mjs new",
+    "plan:start": "node tools/plan.mjs start",
+    "plan:status": "node tools/plan.mjs status",
+    "plan:complete": "node tools/plan.mjs complete",
+    "plan:pr": "node tools/plan.mjs pr",
+    "plan:cleanup": "node tools/plan.mjs cleanup",
+    "plan:revert": "node tools/plan.mjs revert",
+    "plan:abandon": "node tools/plan.mjs abandon",
+    "work:start": "node tools/plan.mjs work-start",
+    "work:pr": "node tools/plan.mjs work-pr",
+    "work:cleanup": "node tools/plan.mjs work-cleanup",
+    "gh:setup": "node tools/gh-setup.mjs",
+    "doctor": "node tools/doctor.mjs",
+    "test": "node --test tools/test/*.test.mjs"
+  }
+}

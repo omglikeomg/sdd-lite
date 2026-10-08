@@ -1,0 +1,42 @@
+# Runs on every PR and every push to main: the same checks as `pnpm check` and `pnpm test`.
+# docs/GITHUB.md ("Continuous integration") explains the one secret private product repositories need.
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      HUB_SKIP_GRAPHIFY: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check out the product repositories at the hub's pointers
+        if: hashFiles('.gitmodules') != ''
+        env:
+          HUB_REPOS_TOKEN: ${{ secrets.HUB_REPOS_TOKEN }}
+        run: |
+          # .gitmodules may use SSH host aliases (git@github.com-personal:owner/repo.git); CI clones over HTTPS.
+          sed -E -i 's#url = git@[^:]+:#url = https://github.com/#' .gitmodules
+          if [ -n "$HUB_REPOS_TOKEN" ]; then
+            git config --global url."https://x-access-token:${HUB_REPOS_TOKEN}@github.com/".insteadOf "https://github.com/"
+          fi
+          git submodule sync --quiet
+          git submodule update --init
+
+      - name: pnpm check
+        run: node tools/docs-check.mjs
+
+      - name: pnpm test
+        run: node --test tools/test/*.test.mjs
