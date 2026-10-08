@@ -3,13 +3,13 @@
 // squash merge → plan:complete → completion PR, then every check rule is broken once on purpose.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { makePristineHub } from './fixture.mjs';
 
-const HUB_SRC = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const base = mkdtempSync(join(tmpdir(), 'hub-e2e-'));
 const hub = join(base, 'hub');
 writeFileSync(join(base, 'gitconfig'), `[user]
@@ -106,13 +106,7 @@ test('scratch hub and product repositories', () => {
     'app/(shop)/layout.tsx': 'export default function ShopLayout() {\n  return null;\n}\n',
     ...(LEFTHOOK ? { 'lefthook.yml': `commit-msg:\n  commands:\n    team-check:\n      run: echo team >> "${join(base, 'team-hook-ran')}"\n` } : {}),
   });
-  cpSync(HUB_SRC, hub, {
-    recursive: true,
-    filter: (src) => {
-      const rel = src.slice(HUB_SRC.length + 1);
-      return !['.git', 'repos', '.worktrees', 'graphify-out', '.superpowers', '.gitmodules'].includes(rel) && basename(src) !== 'node_modules';
-    },
-  });
+  makePristineHub(hub);
   git(hub, 'init', '--quiet');
   git(hub, 'add', '-A');
   git(hub, 'commit', '--quiet', '-m', 'chore: initial hub');
@@ -120,7 +114,7 @@ test('scratch hub and product repositories', () => {
   git(hub, 'remote', 'add', 'origin', join(base, 'hub.git'));
   git(hub, 'fetch', '--quiet', 'origin');
   git(hub, 'branch', '--quiet', '--set-upstream-to=origin/main');
-  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'the shipped hub passes its own checks');
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'a fresh hub passes its own checks');
 });
 
 test('repo:add onboards repositories; check demands their architecture maps', () => {

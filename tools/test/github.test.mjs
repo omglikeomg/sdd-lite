@@ -2,14 +2,14 @@
 // labels moved by commands, explanatory comments, PRs, and bounded work started from a bug issue.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { makePristineHub } from './fixture.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const HUB_SRC = resolve(HERE, '../..');
 const base = mkdtempSync(join(tmpdir(), 'hub-gh-'));
 const hub = join(base, 'hub');
 const STATE = join(base, 'gh-state.json');
@@ -65,13 +65,7 @@ test('setup: hub, product repo, gh:setup creates labels and records slugs', () =
   apiBare = join(base, 'api.git');
   git(base, 'clone', '--quiet', '--bare', src, apiBare);
 
-  cpSync(HUB_SRC, hub, {
-    recursive: true,
-    filter: (p) => {
-      const rel = p.slice(HUB_SRC.length + 1);
-      return !['.git', 'repos', '.worktrees', 'graphify-out', '.superpowers', '.gitmodules'].includes(rel) && basename(p) !== 'node_modules';
-    },
-  });
+  makePristineHub(hub);
   git(hub, 'init', '--quiet');
   git(hub, 'add', '-A');
   git(hub, 'commit', '--quiet', '-m', 'chore: initial hub');
