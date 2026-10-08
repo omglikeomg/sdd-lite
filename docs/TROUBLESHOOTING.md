@@ -20,6 +20,7 @@ pnpm check         # do the documents agree with the code?
 | "git 2.36 or newer is required" | The hook self-test uses `git hook run` | Upgrade git |
 | `pnpm doctor` shows ✖ for a repository's hooks | Hooks were never installed in this clone, or something replaced them | `pnpm hub:setup`. For a repository using lefthook, run its `npm install` / `pnpm install` first so the lefthook binary exists |
 | A hook you already had stopped running | `hub:setup` keeps it as `<hook>.local` and runs it first; if it is gone, it was never executable | `chmod +x .git/hooks/<hook>.local` in that repository (the hooks folder is printed by `git rev-parse --git-path hooks`) |
+| `pnpm check` (or a hub commit) fails on files you never meant to commit, such as personal notes | The check reads every Markdown file git does not ignore, committed or not | Move them out of the hub, or list their folder in `.git/info/exclude` (local to your clone, never committed) |
 
 ## Submodules
 

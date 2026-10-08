@@ -11,7 +11,7 @@ export function makePristineHub(dest) {
   mkdirSync(dest, { recursive: true });
   cpSync(join(HUB_SRC, 'tools'), join(dest, 'tools'), { recursive: true });
   cpSync(join(HUB_SRC, 'package.json'), join(dest, 'package.json'));
-  writeFileSync(join(dest, '.gitignore'), 'node_modules/\ngraphify-out/\n.worktrees/\n.superpowers/\n');
+  writeFileSync(join(dest, '.gitignore'), 'node_modules/\ngraphify-out/\n.worktrees/\n.reviews/\n.superpowers/\n');
   writeFileSync(join(dest, 'hub.config.json'), JSON.stringify({ defaultBranch: 'main', github: { enabled: false, hubRepo: null }, repos: [] }, null, 2) + '\n');
   for (const dir of ['adr', 'features', 'epics', 'spikes', 'codebases', 'superpowers/specs', 'superpowers/plans']) {
     mkdirSync(join(dest, 'docs', dir), { recursive: true });

@@ -26,7 +26,7 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/codebases/` | Per repository: `ARCHITECTURE.md` (the map) and `architecture/<area>.md` (areas that outgrew the map) | living |
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
 | `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
-| `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `README.md` | How to join and how to work | living |
+| `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `docs/PR_REVIEW.md`, `README.md` | How to join, how to work and how to review | living |
 | `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
 | `docs/superpowers/plans/` | Implementation plans, one per repository, named `<id>-<slug>--<repo>.md` | record |
@@ -49,6 +49,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 | Answer design questions, approve specs and epics, approve every push and PR, merge | You |
 | `plan:start`, then open a new agent session in the worktree it prints | You: an agent can run `plan:start`, but it cannot move its own session into the worktree |
 | Review an onboarding PR (architecture map drafted by the agent) | You, for what code cannot show: intent, owners, deployment |
+| Review a teammate's PR | You: the agent prepares it and drafts comments (`review-pull-request` skill); you decide and post |
 
 ### Who sets each status
 
@@ -331,6 +332,12 @@ Hub documents point at code with backticked hub-relative paths, optionally with 
 
 Ask the agent to "onboard <name>". Its `onboard-repository` skill runs `pnpm repo:add` (which installs hooks and builds the knowledge graph with the new code in it), drafts `docs/codebases/<name>/ARCHITECTURE.md` from the graph and the code, writes or extends contracts with the other repositories, gets `pnpm check` green and proposes a hub PR on `chore/onboard-<name>`. A person reviews it: intent, owners, deployment and plans are often not in the code, and the agent lists what it could not tell.
 
+## Reviewing pull requests
+
+Ask the agent to "help me review api#318". Its `review-pull-request` skill runs `pnpm review:start api 318`, which checks out the PR's head in `.worktrees/api--review-318` (so line numbers match the code under review), saves the diff, refreshes the graph and writes `.reviews/api-318/context.md` with what the hub knows about the change: the spec, plan, Review Focus, rulings and criterion coverage for planned work (found from the commits' `Plan:` footers or the branch name), the fixed issue for a bug fix in GitHub mode, and the architecture documents, contracts, ADRs and team guidelines that govern the changed files.
+
+The skill reviews through the lenses you choose and drafts each comment in two parts: a short one to paste for the author, and the evidence you need to defend it. It writes to `.reviews/api-318/review.md` and never posts, approves or pushes. `pnpm review:cleanup api 318` removes the worktree and keeps the notes. Team guidelines are listed per repository in `hub.config.json` as `reviewGuidelines` (hub-relative paths). The full guide for reviewers is `docs/PR_REVIEW.md`.
+
 ## Contracts
 
 `docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked paths. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
@@ -377,7 +384,7 @@ Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, 
 | `contracts` | Contracts name a configured provider and consumers, cite code in each, and are linked from `docs/ARCHITECTURE.md` |
 | `epics` | Each epic has `prd.md`; every `REQ-n` is in the requirement map and exists; a done epic links only done or abandoned specs; specs cite only requirements their epic defines |
 
-Templates in `docs/templates/` are exempt.
+Templates in `docs/templates/` are exempt. The check reads the working tree, including documents not yet committed, but skips files git ignores: to keep personal notes inside the hub without failing the check (and the commit hook that runs it), list their folder in your own `.git/info/exclude`.
 
 ## Hooks
 
@@ -420,6 +427,8 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | `pnpm work:pr <repo> <type>/<slug> [--create]` | Prints the bounded PR's title and body from its commits; `--create` pushes, opens it with `Fixes <issue>` and explains the fix on the issue |
 | `pnpm gh:setup [--hub-repo owner/name]` | Turns GitHub mode on and creates the labels (`docs/GITHUB.md`) |
 | `pnpm work:cleanup <repo> <type>/<slug>` | Removes a bounded-work worktree and its local branch |
+| `pnpm review:start <repo> <pr>` | Checks out a pull request's head in a review worktree and writes its review context to `.reviews/<repo>-<pr>/` (see "Reviewing pull requests") |
+| `pnpm review:cleanup <repo> <pr>` | Removes the review worktree; keeps the notes in `.reviews/` |
 | `pnpm check` | Runs every rule above |
 | `pnpm test` | Tests for the tools themselves |
 
@@ -445,6 +454,7 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 ## Known limits
 
 - Hooks can be bypassed with `--no-verify` until CI runs `pnpm check`.
+- `pnpm review:start` fetches `refs/pull/<n>/head`, which GitHub publishes; other hosts name pull requests differently.
 - Graphify extracts rationale comments and ADR citations only from TypeScript, JavaScript and Python.
 - A citation like `ADR-0007` in code becomes its own graph node; `pnpm check`, not the graph, resolves it to the file.
 - NestJS dependency injection and Next.js file-system routes are visible to the graph only as files and imports; their wiring is described in the architecture docs.

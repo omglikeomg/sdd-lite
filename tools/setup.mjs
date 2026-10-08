@@ -51,7 +51,7 @@ function main() {
   installPlainHooks(HUB_ROOT, HUB_HOOKS, '--hub');
   for (const [k, v] of HUB_GIT_CONFIG) git(HUB_ROOT, ['config', k, v]);
   console.log('[setup] git config: pull and switch update submodules; push refuses pointers to unpublished commits');
-  addExcludes(HUB_ROOT, ['graphify-out/', '.worktrees/', '.superpowers/']);
+  addExcludes(HUB_ROOT, ['graphify-out/', '.worktrees/', '.reviews/', '.superpowers/']);
   console.log('[setup] hub hooks installed (pre-commit runs `pnpm check`, commit-msg checks Conventional Commits)');
   for (const repo of cfg.repos) {
     try {

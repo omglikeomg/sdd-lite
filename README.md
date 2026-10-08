@@ -6,7 +6,7 @@ The hub holds no product code. It holds what explains the code: what the product
 
 > Once you fork it, this README describes **your** hub. Replace this paragraph with a line about your product.
 
-New here? Read `docs/ONBOARDING.md`, then `docs/EXAMPLES.md` (four pieces of work on an example product, step by step). The rules are in `docs/WORKFLOW.md`.
+New here? Read `docs/ONBOARDING.md`, then `docs/EXAMPLES.md` (five pieces of work on an example product, step by step, including a code review). The rules are in `docs/WORKFLOW.md`.
 
 ## Why it exists
 
@@ -94,6 +94,7 @@ Then follow `docs/ONBOARDING.md`.
 | What a piece of work set out to do | `docs/superpowers/specs/` (design) and `docs/superpowers/plans/` (tasks) |
 | What is in flight | `pnpm plan:status`, and `docs/epics/` (each epic pairs a PRD with its technical design) |
 | How the work is done, step by step | `docs/EXAMPLES.md` |
+| How to review a teammate's PR with the hub's context | `docs/PR_REVIEW.md` |
 | The rules | `docs/WORKFLOW.md` |
 | GitHub issues, labels, PRs and CI | `docs/GITHUB.md` |
 | What to do when something goes wrong | `docs/TROUBLESHOOTING.md` |
@@ -127,4 +128,4 @@ The full list is in `docs/TROUBLESHOOTING.md`; these are the common ones.
 
 ## Agents
 
-Claude Code reads `CLAUDE.md`, which imports `AGENTS.md`; OpenCode and other agents read `AGENTS.md`. Both find the hub's skills in `.claude/skills/`: `hub-workflow` (which command for which step), `graphify-preflight`, `onboard-repository` and `epic-design`. The agent rules are short; the reasoning behind each is in `docs/WORKFLOW.md`.
+Claude Code reads `CLAUDE.md`, which imports `AGENTS.md`; OpenCode and other agents read `AGENTS.md`. Both find the hub's skills in `.claude/skills/`: `hub-workflow` (which command for which step), `graphify-preflight`, `onboard-repository`, `epic-design` and `review-pull-request` (prepares a teammate's PR for your review and drafts the comments). The agent rules are short; the reasoning behind each is in `docs/WORKFLOW.md`.

@@ -23,6 +23,8 @@
     "work:start": "node tools/plan.mjs work-start",
     "work:pr": "node tools/plan.mjs work-pr",
     "work:cleanup": "node tools/plan.mjs work-cleanup",
+    "review:start": "node tools/review.mjs start",
+    "review:cleanup": "node tools/review.mjs cleanup",
     "gh:setup": "node tools/gh-setup.mjs",
     "doctor": "node tools/doctor.mjs",
     "test": "node --test tools/test/*.test.mjs"

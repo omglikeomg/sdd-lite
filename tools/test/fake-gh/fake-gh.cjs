@@ -47,6 +47,9 @@ if (noun === 'label' && verb === 'create') {
   const p = state.prs[key(args[2])] || fail(`pr ${key(args[2])} not found`);
   p.state = 'CLOSED';
   p.closeComment = opt('--comment');
+} else if (noun === 'pr' && verb === 'view') {
+  const p = state.prs[key(args[2])] || fail(`pr ${key(args[2])} not found`);
+  console.log(JSON.stringify({ number: p.number, title: p.title, body: p.body, url: `https://github.com/${repo}/pull/${p.number}`, headRefName: p.head, baseRefName: p.base }));
 } else if (noun === 'pr' && verb === 'list') {
   const open = Object.entries(state.prs).filter(([k, p]) => k.startsWith(`${repo}#`) && p.head === opt('--head') && p.state === 'OPEN');
   console.log(JSON.stringify(open.map(([, p]) => ({ number: p.number, url: `https://github.com/${repo}/pull/${p.number}` }))));

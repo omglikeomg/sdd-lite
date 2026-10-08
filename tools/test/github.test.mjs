@@ -259,6 +259,15 @@ test('bounded work from a bug issue: context in, explanation and PR back out', (
   assert.match(body, /\n\nFixes acme\/hub#46\nRefs: BILL-ISSUE-1$/);
   assert.match(issue(46).comments.at(-1).body, /### Fix ready for review in `api`[\s\S]*\*\*Root cause:\*\* totals were truncated[\s\S]*\*\*Fix:\*\* round half-up[\s\S]*pull\/47\. Merging it closes this issue/);
   assert.ok(issue(46).labels.includes('status:pending-review'));
+
+  // A teammate reviews the PR: the issue it fixes comes with it.
+  git(apiBare, 'update-ref', 'refs/pull/47/head', 'refs/heads/fix/invoice-rounding');
+  tool('review.mjs', 'start', 'api', '47');
+  const review = readFileSync(join(hub, '.reviews/api-47/context.md'), 'utf8');
+  assert.match(review, /\*\*fix\(billing\): round invoice totals half-up\*\* \(https:\/\/github\.com\/acme\/api\/pull\/47\), branch `fix\/invoice-rounding`/);
+  assert.match(review, /### Issue acme\/hub#46\n\n#### acme\/hub#46: Invoice totals off by a cent[\s\S]*Seen on order 1234/);
+  tool('review.mjs', 'cleanup', 'api', '47');
+  rmSync(join(hub, '.reviews'), { recursive: true });
   tool('plan.mjs', 'work-cleanup', 'api', 'fix/invoice-rounding');
   assert.ok(!existsSync(join(hub, '.worktrees', 'api--invoice-rounding.issue.md')));
 });

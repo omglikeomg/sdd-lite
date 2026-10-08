@@ -35,6 +35,7 @@ export function loadConfig(root = HUB_ROOT) {
     r.defaultBranch ??= 'main';
     r.tests ??= [];
     r.mustDocument ??= [];
+    r.reviewGuidelines ??= [];
   }
   return cfg;
 }

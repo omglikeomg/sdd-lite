@@ -149,6 +149,13 @@ test('hub:setup installs hub hooks; hub commits must be conventional and pass ch
   git(hub, 'push', '--quiet', 'origin', 'main');
 });
 
+test('check reads untracked documents, but not the ones git ignores', () => {
+  write(join(hub, 'docs/scratch/notes.md'), '# my notes\n');
+  assert.match(check(), /docs\/scratch\/notes\.md:1 +\[location\]/);
+  writeFileSync(join(hub, '.git/info/exclude'), `${readFileSync(join(hub, '.git/info/exclude'), 'utf8')}docs/scratch/\n`);
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
+});
+
 test('plan:new allocates 000001 and the spec branch; hand-ticked boxes are rejected', () => {
   const out = tool('plan.mjs', 'new', 'checkout-payments', '--repos', 'api,web');
   assert.match(out, /000001/);
@@ -220,6 +227,37 @@ test('web worktree: lefthook keeps the team hooks and adds the hub hooks', () =>
     '--trailer', 'Ruling: reused the generic error banner — no design for a decline banner yet — restyle later');
   if (LEFTHOOK) assert.ok(existsSync(join(base, 'team-hook-ran')), "the repository's own lefthook command still runs");
   git(wt, 'push', '--quiet', '-u', 'origin', 'feat/000001-checkout-payments');
+});
+
+test('review:start prepares a PR for review with its plan, rulings, criteria and governing documents', () => {
+  // The hosting service publishes every PR's head as refs/pull/<n>/head.
+  git(webBare, 'update-ref', 'refs/pull/7/head', 'refs/heads/feat/000001-checkout-payments');
+  const cfgFile = join(hub, 'hub.config.json');
+  const cfgText = readFileSync(cfgFile, 'utf8');
+  const cfg = JSON.parse(cfgText);
+  cfg.repos.find((r) => r.name === 'web').reviewGuidelines = ['docs/codebases/web/review.md'];
+  writeFileSync(cfgFile, JSON.stringify(cfg, null, 2));
+  try {
+    tool('review.mjs', 'start', 'web', '7');
+  } finally {
+    writeFileSync(cfgFile, cfgText);
+  }
+  const wt = join(hub, '.worktrees/web--review-7');
+  assert.equal(git(wt, 'rev-parse', 'HEAD').trim(), git(webBare, 'rev-parse', 'refs/pull/7/head').trim(), "the worktree is at the PR's head");
+  const ctx = readFileSync(join(hub, '.reviews/web-7/context.md'), 'utf8');
+  assert.match(ctx, /### Planned work 000001/);
+  assert.match(ctx, /Tasks with commits in this PR: 1 of 1/);
+  assert.match(ctx, /- reused the generic error banner/);
+  assert.match(ctx, /\| CHECKOUT-PAY-2 \| yes \| `e2e\/checkout\.spec\.ts` \|/);
+  assert.match(ctx, /\| CHECKOUT-PAY-1 \| no \| none in web \|/);
+  assert.match(ctx, /`docs\/codebases\/web\/ARCHITECTURE\.md`: the repository's map/);
+  assert.match(ctx, /`docs\/codebases\/web\/review\.md`: missing/);
+  assert.match(readFileSync(join(hub, '.reviews/web-7/pr.diff'), 'utf8'), /\+test\('CHECKOUT-PAY-2/);
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'review notes are not hub documents');
+  tool('review.mjs', 'cleanup', 'web', '7');
+  assert.ok(!existsSync(wt));
+  assert.ok(existsSync(join(hub, '.reviews/web-7/context.md')), "the reviewer's notes are kept");
+  rmSync(join(hub, '.reviews'), { recursive: true });
 });
 
 test('plan:complete refuses before merge, then completes with rulings from footers and the ledger', () => {

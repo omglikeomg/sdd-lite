@@ -87,6 +87,10 @@ export function setStatus(repo, number, status) {
   gh(['issue', 'edit', String(number), '--repo', repo, '--add-label', status, ...current.flatMap((l) => ['--remove-label', l])]);
 }
 
+export function viewPr(repo, number) {
+  return JSON.parse(gh(['pr', 'view', String(number), '--repo', repo, '--json', 'number,title,body,url,headRefName,baseRefName']));
+}
+
 export function openPrFor(repo, head) {
   const open = JSON.parse(gh(['pr', 'list', '--repo', repo, '--head', head, '--state', 'open', '--json', 'number,url']) || '[]');
   return open[0] || null;

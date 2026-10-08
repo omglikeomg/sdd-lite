@@ -1,6 +1,6 @@
 # Worked examples
 
-This document follows one small product through four pieces of work, from the first message to the last merge. Read it once end to end before your first change; afterwards, jump to the example that looks like the work in front of you.
+This document follows one small product through four pieces of work, from the first message to the last merge, and one code review. Read it once end to end before your first change; afterwards, jump to the example that looks like the work in front of you.
 
 The product, the people and the numbers are invented. The commands, the files they create, the checks and the GitHub behaviour are the hub's real ones; command output is shortened where it is long.
 
@@ -10,6 +10,7 @@ The product, the people and the numbers are invented. The commands, the files th
 | [2. Bulk editing](#example-2-bulk-editing) | Select several notes, change them at once | Architectural | api, web | 4 | about $8–12 |
 | [3. An export worker](#example-3-an-asynchronous-export-worker) | Export notes to CSV in the background through SQS | Architectural, with an ADR | api | 3 | about $6–10 |
 | [4. Users and login](#example-4-the-users-and-login-epic) | Accounts, sign-in, private notes | Epic of four phases | api, web | 1 + 3–4 per phase | about $5 for the epic design, then per phase |
+| [5. Reviewing a PR](#example-5-reviewing-a-pull-request) | Marco reviews the bulk-edit API PR from example 2 | Review | api | reviews 1 | about $1–3 |
 
 ## The cast and the system
 
@@ -502,6 +503,161 @@ If priorities change mid-way (say phase 4 is dropped because the company adopts 
 When every phase links a spec that is done (or abandoned), Lucía sets the epic to `done` on a branch named `docs/epic-users-and-login-complete`. `pnpm check` verifies that no phase was left unstarted, and `pnpm epic:pr users-and-login --create` writes the closing PR with `Closes #30`.
 
 **What exists afterwards:** Irene's PRD next to the design that answered it, with every requirement traceable to a phase, from there to acceptance criteria, tests and code; the questions that were settled before anyone built anything; one sub-issue per phase under the epic; ADRs for the decisions that will matter in two years.
+
+---
+
+## Example 5: Reviewing a pull request
+
+Back in example 2, Lucía opened `acme/notes-api#91` (the bulk endpoint of 000020) and asked Marco to review it. Marco knows the web app well and the API less so. This example is his review. `docs/PR_REVIEW.md` is the reviewer's guide.
+
+### 1. Preparing the review
+
+> **Marco:** Help me review api#91.
+
+The agent loads the `review-pull-request` skill:
+
+```
+$ pnpm review:start api 91
+[review] created .worktrees/api--review-91 at the PR's head 7d2e41c09a3f
+[review] graph refreshed (graphify update .)
+  Review context: .reviews/api-91/context.md
+  Ask your agent to review it with the review-pull-request skill. It drafts; you post.
+  When the review is done: pnpm review:cleanup api 91
+```
+
+`repos/api` stays on `main`; the PR's code is in the review worktree. The context file, shortened:
+
+```markdown
+# Review: api pull request #91
+
+**feat(notes): bulk edit notes** (https://github.com/acme/notes-api/pull/91), branch `feat/000020-bulk-edit`
+
+## The work this PR belongs to
+
+### Planned work 000020
+
+- Design spec: `docs/superpowers/specs/000020-bulk-edit-design.md` (status: in-progress)
+- Plan: `docs/superpowers/plans/000020-bulk-edit--api.md`
+- Tasks with commits in this PR: 3 of 3
+
+#### Review focus (from the plan)
+
+- The 200-note cap is checked before any note is read (NOTES-BULK-3).
+- All notes change in one transaction, or none do (NOTES-BULK-2).
+
+#### Rulings (decisions the implementer made against the plan)
+
+- accept an empty tag list as "no tag change" — the spec allows it and the plan's check did not — one extra validation case if product disagrees
+
+#### Acceptance criteria of the spec
+
+| Criterion | In the PR's `Refs:` | Tests at the PR's head citing it |
+|---|---|---|
+| NOTES-BULK-1 | yes | `apps/api/src/notes/application/commands/bulk-update-notes/bulk-update-notes.handler.spec.ts` |
+| NOTES-BULK-2 | yes | `…/bulk-update-notes.handler.spec.ts` |
+| NOTES-BULK-3 | yes | `apps/api/src/notes/infrastructure/notes.controller.spec.ts` |
+| NOTES-BULK-4 | no | none in api |
+| NOTES-BULK-5 | no | none in api |
+
+## Documents that govern the changed code
+
+- `docs/codebases/api/ARCHITECTURE.md`: the repository's map, its invariants first
+- `docs/contracts/notes-rest.md`: api provides it to web
+```
+
+NOTES-BULK-4 and 5 have no test here because they belong to the web plan, which the agent confirms before saying anything about them.
+
+### 2. Impact and lenses
+
+The agent reads the whole diff and every listed document, then maps the impact. The PR changes `Note.update()` so that it takes tag operations, and `graphify explain "Note.update"` lists its callers on `main`: the new `BulkUpdateNotesHandler`, and also `UpdateNoteHandler`, the single-note PATCH from example 1, whose files the PR does not touch.
+
+> **Agent:** These lenses apply:
+>
+> | Lens | Why it applies | Files |
+> |---|---|---|
+> | Intent | Planned work 000020: 2 Review Focus items, 1 ruling | all |
+> | Proof | NOTES-BULK-3's test checks the status code only | `notes.controller.spec.ts` |
+> | Architecture | `Note.update()` changed; `UpdateNoteHandler` calls it and is not in the diff | `note.aggregate.ts` |
+> | Contracts | api provides `docs/contracts/notes-rest.md` | `notes.controller.ts` |
+> | Risk | Always | all |
+>
+> Suggested order: Intent, Proof, Architecture, Risk, Contracts. Which lenses should I run?
+
+> **Marco:** next
+
+### 3. The comments
+
+The Intent lens checks each Review Focus item against the code. The second item holds: the handler wraps the change in one Prisma transaction. The first does not, and the agent writes it up:
+
+````markdown
+**Summary.** Nice work, this reads cleanly and the transaction handling is exactly what the spec asked for. One thing on the 200-note cap needs fixing before it merges; the rest is small.
+
+`apps/api/src/notes/application/commands/bulk-update-notes/bulk-update-notes.handler.ts` lines 18–27 · Intent · [blocking]
+
+The 200-note cap is checked after `findManyByIds` has loaded the notes, so a request with 10,000 IDs still reads them all before we reject it. NOTES-BULK-3 (and the plan's Review Focus) says we reject it before reading any note. Moving the check to the top of `execute` fixes it:
+
+```suggestion
+    if (command.ids.length > MAX_BULK_NOTES) throw new BulkLimitExceededError(MAX_BULK_NOTES);
+    const notes = await this.notes.findManyByIds(command.ids);
+```
+
+The controller test only checks the 400, which is why it passes either way. Could it also assert that the repository wasn't called?
+
+---
+
+**What happens today:** `execute()` calls `this.notes.findManyByIds(command.ids)` (line 18), then checks `command.ids.length > MAX_BULK_NOTES` (line 25) and throws `BulkLimitExceededError`, which the controller maps to 400. The response is right; the database work happens anyway.
+
+**Why it is a problem:** the cap exists to bound the work one request can cause. `findManyByIds` builds one `WHERE id IN (…)` query with every ID, so the cost grows with the input the cap was meant to limit.
+
+**Evidence:** `…/bulk-update-notes.handler.ts:18` `const notes = await this.notes.findManyByIds(command.ids);` and `:25` `if (command.ids.length > MAX_BULK_NOTES)`. `apps/api/src/notes/infrastructure/notes.controller.spec.ts:41` `it('NOTES-BULK-3: rejects more than 200 ids', …)` asserts only `expect(res.status).toBe(400)`. Counter-evidence looked for: no validation pipe or DTO decorator limits the array size before the handler (`bulk-update-notes.dto.ts` has `@IsArray()` only).
+
+**Rule:** NOTES-BULK-3: "If a bulk change lists more than 200 note IDs, then the system shall reject it with HTTP 400 before reading any note." The code meets the first half only.
+
+**Confidence:** high. It would be wrong if `findManyByIds` were lazy, which it is not (it awaits `prisma.note.findMany`).
+````
+
+The Architecture lens turns the graph finding into a question rather than a claim, because the agent cannot tell what was intended:
+
+```markdown
+`apps/api/src/notes/domain/note.aggregate.ts` lines 52–64 · Architecture · [question]
+
+`Note.update()` now reads an empty `tags` list as "no tag change" (the ruling on task 2). `UpdateNoteHandler` calls the same method for the single-note PATCH, where `tags: []` used to clear every tag. Was that change meant to reach the single PATCH too, or am I missing a branch that keeps the old behaviour there?
+```
+
+Its reviewer part quotes both call sites with their lines, the ruling, and the `NOTES-EDIT-*` criteria in `docs/features/notes.md`, none of which says what an empty list means for one note. That gap is why it is a question. The Risk and Contracts lenses find nothing worth posting; the agent says so in one line each instead of padding the review. Everything is in `.reviews/api-91/review.md`.
+
+### 4. Marco's own finding
+
+While reading, Marco notices something himself:
+
+> **Marco:** nit: the 200 in `bulk-update-notes.dto.ts` should be `MAX_BULK_NOTES`, like the handler.
+
+The agent opens the file, finds the line, checks that the handler really uses the constant (it does, from `bulk-update-notes.constants.ts`), and writes Marco's point in the same format, adding nothing of its own:
+
+```markdown
+`apps/api/src/notes/application/commands/bulk-update-notes/bulk-update-notes.dto.ts` line 9 · [nit]
+
+Tiny one: this 200 could be `MAX_BULK_NOTES`, like the handler, so the cap lives in one place.
+```
+
+### 5. Posting and cleaning up
+
+Marco reads the reviewer parts, agrees with all three comments, pastes them into one GitHub review and submits it as "Request changes". The agent never touched GitHub. Lucía moves the check, strengthens the test, answers the question ("no, the single PATCH must keep clearing tags"), keeps the old behaviour there with a test for it and a second `Ruling:` explaining the split, and pushes. Marco asks for a second look:
+
+```
+$ pnpm review:start api 91
+[review] updated .worktrees/api--review-91 to the PR's head 1c9b07e5d2aa
+```
+
+The agent checks the three comments against the new head, finds them resolved, and Marco approves. Then:
+
+```
+$ pnpm review:cleanup api 91
+[review] removed .worktrees/api--review-91
+[review] kept .reviews/api-91 (your notes); delete it when you no longer need them
+```
+
+**What exists afterwards:** nothing new in the hub, which is the point: the review used the spec, the plan, the ruling, the contract and the graph, and its results live where reviews live, on the PR. A defect the tests could not see was caught because the plan said where to look, and a side effect on code the diff never touched was caught because the graph knew who calls it.
 
 ---
 

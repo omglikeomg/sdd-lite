@@ -15,7 +15,7 @@ import { matchesAny, globToRegExp } from './lib/glob.mjs';
 import { gitTry, lsFiles } from './lib/git.mjs';
 
 const SKIP_ANYWHERE = new Set(['.git', 'node_modules']);
-const SKIP_TOP = new Set(['repos', '.worktrees', 'graphify-out', '.superpowers']);
+const SKIP_TOP = new Set(['repos', '.worktrees', '.reviews', 'graphify-out', '.superpowers']);
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
   rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) ||
@@ -32,7 +32,12 @@ export function allMarkdown(root) {
     }
   };
   walk('');
-  return out.sort();
+  // Files git ignores (.gitignore, or a person's own .git/info/exclude) are not hub documents;
+  // untracked files that are not ignored, such as a spec not yet committed, are checked.
+  const listed = gitTry(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard']);
+  if (!listed.ok) return out.sort();
+  const known = new Set(listed.out.split('\0'));
+  return out.filter((f) => known.has(f)).sort();
 }
 
 export function runChecks(root = HUB_ROOT) {
