@@ -6,6 +6,8 @@ The hub holds no product code. It holds what explains the code: what the product
 
 > Once you fork it, this README describes **your** hub. Replace this paragraph with a line about your product.
 
+> **This is the `opinionated` branch:** `main` plus a set of engineering patterns in `docs/patterns/`, starting from [house conventions](docs/patterns/house-conventions.md). Fork it to start new products and repositories with those opinions built in; fork `main` to adopt the hub around existing code without them. It is kept current by merging `main` into it.
+
 New here? Read `docs/ONBOARDING.md`, then `docs/EXAMPLES.md` (five pieces of work on an example product, step by step, including a code review). The rules are in `docs/WORKFLOW.md`.
 
 ## Why it exists
