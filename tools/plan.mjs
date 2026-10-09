@@ -346,7 +346,7 @@ function cmdComplete(args) {
     // Rulings live in `Ruling:` footers on the task commits; Superpowers deletes its ledger when the
     // final review is clean, so the ledger only adds rulings from a run that has not finished.
     const ledger = join(root, '.worktrees', worktreeDirName(p.repo, id, slug), '.superpowers', 'sdd', n.replace(/\.md$/, ''), 'progress.md');
-    const ledgerRulings = existsSync(ledger) ? rulingsFromLedger(readFileSync(ledger, 'utf8')).map((r) => r.replace(/^Ruling:\s*/, '')) : [];
+    const ledgerRulings = existsSync(ledger) ? rulingsFromLedger(readFileSync(ledger, 'utf8')).map((r) => r.replace(/^Ruling:\s*/i, '')) : [];
     const rulings = [...footerRulings, ...ledgerRulings.filter((r) => !footerRulings.includes(r))];
     return { rel, text, plan, repo, repoDir, done, merged, rulings, defaultRef: progress.defaultRef };
   });

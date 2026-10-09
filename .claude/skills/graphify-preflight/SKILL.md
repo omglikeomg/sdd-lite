@@ -17,14 +17,14 @@ It is the "Explore project context" step of `superpowers:brainstorming`. Scale i
 
 Create a todo for each item and complete them in order.
 
-1. **Refresh.** From the hub root run `graphify update .`. Paste the last line of its output. If it fails, stop and report it; do not query a stale graph.
-2. **Documents pending?** If `graphify-out/needs_update` exists and the work is Architectural, tell your human partner that document changes are not yet in the graph and ask whether to run `/graphify . --update` (it calls an LLM and costs tokens). Continue either way, noting the answer.
+1. **Refresh.** From the hub root run `GRAPHIFY_NO_TIPS=1 graphify update .` and paste its `[graphify watch]` line: `Rebuilt: … nodes, … edges, … communities`, or `No code-graph topology changes detected` when nothing changed. If it fails, stop and report it; do not query a stale graph.
+2. **LLM document layer?** `graphify update .` refreshes code and the structure of every Markdown file for free. If `graphify-out/cost.json` exists, someone ran the optional LLM pass in this clone, and documents that pass read are no longer re-read by `graphify update .`: their later edits are missing from the graph. For Architectural work, tell your human partner and ask whether to run `/graphify . --update` (it calls an LLM and costs tokens; it re-reads only changed files). Continue either way, noting the answer. Without `cost.json` there is nothing to ask.
 3. **Read the maps.** `docs/ARCHITECTURE.md`, the `docs/codebases/<repo>/ARCHITECTURE.md` of every repository the request touches, any area document whose name matches the domain, and every pattern in `docs/patterns/` those documents cite: new code follows them.
 4. **Query.** Two to four questions in the request's own words, for example:
    - `graphify query "how are invoices issued"`
-   - `graphify explain "BillingService"` for every concrete class, module or route named in the request
+   - `graphify explain "BillingService"` for every concrete class, module or route named in the request (`graphify explain "repos/api/src/billing/billing.service.ts::issue"` for a method, or when a name exists twice)
    - `graphify path "CheckoutController" "PaymentGateway"` when two parts must be connected
-5. **Find the reasons.** For every module the answers touch, look for the documents citing it (incoming `references` edges in `graphify explain`), ADRs listed in `docs/ARCHITECTURE.md` under Evolution, `// WHY:` rationale nodes, and acceptance criteria in `docs/features/`.
+5. **Find the reasons.** For every module the answers touch, look for the documents citing it (`graphify affected "<Symbol>"` lists every importer, caller and citing document; `graphify explain` stops at 20 connections, so on busy modules it hides them), ADRs listed in `docs/ARCHITECTURE.md` under Evolution, `// WHY:` rationale nodes, and acceptance criteria in `docs/features/`. Documents link to code in the graph only through `` `path::Symbol` `` citations; `grep -rn "<file path>" docs/` finds those that cite a bare path.
 6. **Verify.** Open every file you will name in the Context block. `EXTRACTED` edges are facts; `INFERRED` and `AMBIGUOUS` edges are leads until the code confirms them.
 7. **Write the Context block** (format below) into the conversation for Bounded work, or into the design spec's `## Context` for Architectural work.
 
@@ -33,8 +33,8 @@ Create a todo for each item and complete them in order.
 ```markdown
 ## Context
 
-Graph refreshed: `graphify update .` → "Rebuilt: 4,812 nodes, 9,733 edges, 61 communities" (2026-10-08)
-Document layer: up to date | pending (human chose to skip the LLM pass)
+Graph refreshed: `graphify update .` → "Rebuilt: 4812 nodes, 9733 edges, 61 communities" (2026-10-08)
+Document layer: structure only | LLM layer refreshed | LLM layer stale (human chose not to rerun it)
 
 **Existing code to reuse or extend**
 - `repos/api/src/billing/billing.service.ts::BillingService` issues invoices; extend it instead of a new service.

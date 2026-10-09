@@ -83,7 +83,7 @@ function plannedWork(id, repo, cfg, commits, wt, testFiles) {
     '',
     section(planText, 'Review Focus')?.text.trim() || 'The plan has no `## Review Focus` section.',
     '',
-    '#### Rulings (decisions the implementer made against the plan)',
+    '#### Rulings (decisions recorded during implementation)',
     '',
   );
   const rulings = [...new Set(commits.flatMap((c) => footerValues(c.body, 'Ruling')))];

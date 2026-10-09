@@ -62,7 +62,7 @@ $ pnpm repo:add api git@github.com:acme/notes-api.git --preset nest,cqrs
   docs/codebases/api/ARCHITECTURE.md from the graph, …
 ```
 
-It reads `graphify-out/GRAPH_REPORT.md`, queries the graph ("what are the main modules of api", `graphify explain "NotesModule"`), opens the files it will cite, and writes `docs/codebases/api/ARCHITECTURE.md`: what the API is, the hexagonal layering, every `*.module.ts` and `*.handler.ts` by path (the `nest` and `cqrs` presets require it), invariants such as "controllers never call Prisma directly". After `web` is onboarded the same way, it writes the first contract, `docs/contracts/notes-rest.md` (`provider: api`, `consumers: [web]`), citing the controller in `api` and the API client in `web`. It ends with a list of what the code could not tell it ("who owns notes-web?", "how is it deployed?"), opens a hub PR on `chore/onboard-api`, and Lucía reviews it like any other PR.
+It reads `graphify-out/GRAPH_REPORT.md`, queries the graph ("what are the main modules of api", `graphify explain "NotesModule"`), opens the files it will cite, and writes `docs/codebases/api/ARCHITECTURE.md`: what the API is, the hexagonal layering, every `*.module.ts` and `*.handler.ts` as a `path::Symbol` citation such as `` `repos/api/apps/api/src/notes/notes.module.ts::NotesModule` `` (the `nest` and `cqrs` presets require them, and the symbol form is what links the map to the code in the graph), invariants such as "controllers never call Prisma directly". After `web` is onboarded the same way, it writes the first contract, `docs/contracts/notes-rest.md` (`provider: api`, `consumers: [web]`), citing the controller in `api` and the API client in `web`. It ends with a list of what the code could not tell it ("who owns notes-web?", "how is it deployed?"), opens a hub PR on `chore/onboard-api`, and Lucía reviews it like any other PR.
 
 Finally, GitHub mode:
 
@@ -227,7 +227,7 @@ The agent runs `graphify-preflight`, then `superpowers:brainstorming`. The prefl
 ```markdown
 ## Context
 
-Graph refreshed: `graphify update .` → "Rebuilt: 1,904 nodes, 3,871 edges, 32 communities"
+Graph refreshed: `graphify update .` → "Rebuilt: 1904 nodes, 3871 edges, 32 communities"
 
 **Existing code to reuse or extend**
 - `repos/api/src/notes/application/commands/update-note/update-note.handler.ts::UpdateNoteHandler` already validates and applies a partial update to one note (NOTES-EDIT-3).
@@ -296,7 +296,7 @@ $ pnpm plan:start 000020 --repo api
     Execute the plan …/docs/superpowers/plans/000020-bulk-edit--api.md with superpowers:subagent-driven-development
 ```
 
-#20 moves back to `status:ongoing`. In each worktree, `superpowers:subagent-driven-development` dispatches a fresh implementer per task, reviews each task, and finishes with a whole-branch review. Along the way the API agent finds that the plan's validation step would reject an empty tag list, which the spec allows; it decides and records the decision on the task's commit:
+#20 moves back to `status:ongoing`. In each worktree, `superpowers:subagent-driven-development` dispatches a fresh implementer per task, reviews each task, and finishes with a whole-branch review. Before dispatching anything, the API run's pre-flight scan finds that the plan's validation step would reject an empty tag list, which the spec allows. A wrong plan is not the agent's to fix alone, so it asks Lucía which governs. She answers that an empty list means "no tag change", and the agent records her decision on the task's commit:
 
 ```
 Ruling: accept an empty tag list as "no tag change" — the spec allows it and the plan's check did not — one extra validation case if product disagrees
@@ -545,7 +545,7 @@ $ pnpm review:start api 91
 - The 200-note cap is checked before any note is read (NOTES-BULK-3).
 - All notes change in one transaction, or none do (NOTES-BULK-2).
 
-#### Rulings (decisions the implementer made against the plan)
+#### Rulings (decisions recorded during implementation)
 
 - accept an empty tag list as "no tag change" — the spec allows it and the plan's check did not — one extra validation case if product disagrees
 
@@ -569,7 +569,7 @@ NOTES-BULK-4 and 5 have no test here because they belong to the web plan, which 
 
 ### 2. Impact and lenses
 
-The agent reads the whole diff and every listed document, then maps the impact. The PR changes `Note.update()` so that it takes tag operations, and `graphify explain "Note.update"` lists its callers on `main`: the new `BulkUpdateNotesHandler`, and also `UpdateNoteHandler`, the single-note PATCH from example 1, whose files the PR does not touch.
+The agent reads the whole diff and every listed document, then maps the impact. The PR changes `Note.update()` so that it takes tag operations, and `graphify explain "apps/api/src/notes/domain/note.aggregate.ts::update"` lists the method's callers on `main` (a method needs its file in the name; `graphify affected "Note"` gives the wider picture): the new `BulkUpdateNotesHandler`, and also `UpdateNoteHandler`, the single-note PATCH from example 1, whose files the PR does not touch.
 
 > **Agent:** These lenses apply:
 >

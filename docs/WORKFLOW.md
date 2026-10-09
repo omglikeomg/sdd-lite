@@ -7,7 +7,7 @@ The method combines two things:
 - **[Superpowers](https://github.com/obra/superpowers)** supplies the discipline: brainstorm before building, classify the work, write specs and plans, execute with TDD and review. We use its skills unchanged.
 - **[Graphify](https://github.com/Graphify-Labs/graphify)** supplies memory: one knowledge graph over every product repository and every document in this hub, so design starts from what already exists.
 
-This file adds what neither provides: where documents live, how work is identified across repositories, and checks that keep documents and code honest with each other. `docs/EXAMPLES.md` follows four pieces of work through these rules, step by step.
+This file adds what neither provides: where documents live, how work is identified across repositories, and checks that keep documents and code honest with each other. `docs/EXAMPLES.md` follows four pieces of work and one code review through these rules, step by step.
 
 ## Principles
 
@@ -67,7 +67,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 
 ## Work tiers
 
-Superpowers' brainstorming classifies every request out loud. We add one tier below it and one above it.
+Superpowers has one path for every change: brainstorming, a written spec, a plan, execution. The hub scales it: the agent classifies every request into one of four tiers out loud before designing (`AGENTS.md`), and only architectural work and epic phases take the full Superpowers path.
 
 | Tier | Example | What you produce | IDs |
 |---|---|---|---|
@@ -98,7 +98,7 @@ That rule protects quality; it is not a preference for ceremony. When a change g
 ### Bounded work
 
 1. Graph preflight (see below), scaled down: one or two queries.
-2. Brainstorming presents a short design in chat; nothing starts before a person says yes.
+2. Brainstorming presents a short design in chat; nothing starts before a person says yes. Its later steps do not apply here: no spec file, no `superpowers:writing-plans`. The approved design in chat is the design; the next step is `work:start`.
 3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
 4. Commit with a body made of labelled paragraphs, which `work:pr` turns into the PR's sections:
 
@@ -148,10 +148,10 @@ sequenceDiagram
 ```
 
 1. **Allocate.** `pnpm plan:new checkout-payments --repos api,web` fetches the hub, allocates the next ID, creates the branch `docs/000042-checkout-payments-spec` and prints the exact spec and plan paths.
-2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. A person approves it; set `status: approved`.
-3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`.
+2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path, which replaces its date-based default name. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. A person approves it; set `status: approved`.
+3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
 4. **Spec PR.** `pnpm check`, commit `docs(spec): 000042 checkout-payments`, push, and open the PR with the title and body from `pnpm plan:pr 000042 --spec`. The body leads with the goal and the behaviour in plain language, so non-engineers can review it. Merge; from here `main` shows the work as approved.
-5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
+5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`. Their worktree step finds it is already in an isolated worktree and goes on to setup; dependencies are already installed with the repository's own package manager, so it skips its `npm install`.
 6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. Review, then squash merge.
 7. **Complete.** When every repository's code PR is merged, `pnpm plan:complete 000042` creates `docs/000042-checkout-payments-completion`, ticks the plan checkboxes from the `Task:` footers, copies the agent's rulings from the `Ruling:` footers (and from the Superpowers ledger if a run left one), records the merge commits, moves the submodule pointers, moves the spec's acceptance criteria into the feature document named in its `## Links`, and sets the spec to `done`.
 8. **Completion PR.** The agent applies the spec's Documentation impact (it is printed by `plan:complete`) to the living documents and ticks each item; `pnpm check` refuses a done spec with an unticked item, and also names any structural file no architecture document covers. Commit `docs(completion): 000042 checkout-payments`, open the PR with `pnpm plan:pr 000042 --completion` (it lists the documentation updated), review, merge.
@@ -272,7 +272,7 @@ Spikes follow Superpowers (answer first, throwaway code); write a spike note onl
 Plans come from `superpowers:writing-plans` unchanged, with the additions in `docs/templates/PLAN-ADDENDUM.md`:
 
 - header lines `**Repo:**` and `**Branch:**`;
-- an `## Execution rules` section the executing agent must follow;
+- an `## Execution rules` section the executing agent must follow. With `superpowers:subagent-driven-development` that is the controller: each implementer subagent receives only its own `### Task N` section, so anything an implementer must do belongs in the task's steps;
 - every commit step written as `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" --trailer "Refs: <ids>"`, because the implementer subagent sees only its own task;
 - every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`.
 
@@ -303,7 +303,7 @@ Refs: CHECKOUT-PAY-2, ADR-0012
 - `Plan:` is added automatically from the branch name.
 - `Task:` names the plan task the commit completes (`Task: 3, 4` if one commit finishes two).
 - `Refs:` lists ADR numbers and acceptance-criteria IDs; every one must exist.
-- `Ruling:` records a decision the executing agent made where the plan was wrong or silent: `Ruling: <decision> — <why> — <cost if wrong>`. Superpowers keeps rulings in a ledger it deletes when the run finishes, so the footer is the durable copy.
+- `Ruling:` records a decision taken during execution where the plan was wrong or silent, and every reviewer finding the run parked: `Ruling: <decision> — <why> — <cost if wrong>`. Superpowers escalates a wrong plan to the person, so the decision is usually theirs; the executing agent records it. When the task commit already exists, the record is an empty commit (`git commit --allow-empty -m "chore(plan): record ruling" --trailer "Task: <n>" --trailer "Ruling: …"`), never an amend: Superpowers' review packages refer to commits by SHA. Subagent-driven development keeps parked findings in a ledger it deletes when the final review is clean, so the footer is the durable copy.
 
 Code PRs are squash merged. Configure each product repository on GitHub with squash merging and the default squash message "Pull request title and description": the title generated by `pnpm plan:pr` becomes the commit header, and its body, which ends with the `Plan:` and `Task:` footers, becomes the commit body. One squash commit per repository per plan makes a failed feature easy to find and revert:
 
@@ -327,7 +327,7 @@ From most to least durable:
 
    Graphify turns `// WHY:`, `// NOTE:` and `ADR-NNNN` in TypeScript and JavaScript comments into graph nodes linked to the file. `SPEC:` is not recognised by Graphify, so we do not use it.
 
-Hub documents point at code with backticked hub-relative paths, optionally with a symbol: `` `repos/api/src/billing/billing.service.ts::BillingService` ``. Graphify turns these into `EXTRACTED` edges, so `graphify explain "BillingService"` lists every document that cites it.
+Hub documents point at code with backticked hub-relative paths. With a symbol, `` `repos/api/src/billing/billing.service.ts::BillingService` ``, Graphify turns the citation into an `EXTRACTED` edge, so `graphify affected "BillingService"` lists every document that cites it; a bare backticked name that matches exactly one symbol (`` `BillingService` ``) becomes an `INFERRED` edge. A bare file path, backticked or as a Markdown link, is checked by `pnpm check` but creates no graph edge, so cite the symbol whenever a reader or the preflight should get from the code to the document.
 
 ## Onboarding a repository
 
@@ -341,7 +341,7 @@ The skill reviews through the lenses you choose and drafts each comment in two p
 
 ## Contracts
 
-`docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked paths. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
+`docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked `path::Symbol` citations. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
 
 Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (removing or retyping anything a consumer uses) needs an ADR and a release plan for both sides.
 
@@ -363,16 +363,16 @@ Adding or changing a pattern is a hub PR a person approves. It needs an ADR only
 - `docs/codebases/<repo>/ARCHITECTURE.md` is one repository's map, at most about 200 lines: purpose, what it deploys, a module index, cross-cutting concerns, invariants.
 - `docs/codebases/<repo>/architecture/<area>.md` exists only when an area outgrows the map (more than about 80 lines of its own, its own invariants, or three or more ADRs). Areas follow code boundaries: a NestJS module, a Next.js route group, the SST infrastructure. Each declares the code it covers in `paths:`.
 
-`hub.config.json` lists, per repository, the structural files that must be documented (`mustDocument`). The presets are NestJS modules (`**/*.module.ts`), Next.js top-level route groups (`**/app/*/layout.tsx`, `**/app/*/page.tsx`), SST (`**/sst.config.ts`, `**/infra/**/*.ts`) and CQRS handlers (`**/*.handler.ts`, for repositories whose use cases are command and query handlers). Edit `mustDocument` in `hub.config.json` to add more. Each such file must be mentioned by backticked path in an architecture doc or covered by an area's `paths`.
+`hub.config.json` lists, per repository, the structural files that must be documented (`mustDocument`). The presets are NestJS modules (`**/*.module.ts`), Next.js top-level route groups (`**/app/*/layout.tsx`, `**/app/*/page.tsx`), SST (`**/sst.config.ts`, `**/infra/**/*.ts`) and CQRS handlers (`**/*.handler.ts`, for repositories whose use cases are command and query handlers). Edit `mustDocument` in `hub.config.json` to add more. Each such file must be mentioned by backticked path in an architecture doc (as `` `path::Symbol` ``, so the graph links it) or covered by an area's `paths`.
 
-Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, so every box in a diagram also appears as a backticked path in the prose.
+Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, so every box in a diagram also appears as a backticked `path::Symbol` in the prose.
 
 ## The knowledge graph
 
 - The graph is built at the hub root and covers the hub's documents and every checked-out repository. It lives in `graphify-out/`, which is not committed.
 - `pnpm hub:setup` sets `submodule.recurse`, so `git pull` and `git switch` in the hub move the submodule checkouts with the pointers; `pnpm check` fails if a checkout and its pointer disagree.
-- `graphify update .` rebuilds the code and Markdown structure without an LLM in seconds. The preflight, `pnpm plan:start` and `pnpm plan:complete` run it, so it is fresh at every decision point.
-- The LLM pass over documents (`/graphify . --update` inside an agent) is optional and costs tokens. Run it when `graphify-out/needs_update` exists before architectural design, after a person agrees.
+- `graphify update .` rebuilds the code and the Markdown structure (headings, links, `path::Symbol` citations) without an LLM in seconds. The preflight, `pnpm repo:add`, `pnpm plan:start`, `pnpm plan:complete` and `pnpm review:start` run it, so it is fresh at every decision point. The hub needs nothing more.
+- The LLM pass over documents (`/graphify . --update` inside an agent) is optional and costs tokens; it adds concepts and relations an LLM reads from the prose. Once it has run in a clone (`graphify-out/cost.json` exists), `graphify update .` no longer re-reads the documents it covered, so their later edits reach the graph only when the pass runs again. The preflight asks before every architectural design whether to rerun it. To go back to the free layer, delete `graphify-out/` and run `graphify update .`.
 - Graphify 0.9.80 or newer is required; older versions do not link hub documents to code.
 
 ## What `pnpm check` enforces
@@ -462,7 +462,7 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 ## Agents and harnesses
 
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. It loads `CLAUDE.md` files from parent directories, so sessions started in `.worktrees/…` still get the hub's rules.
-- **OpenCode** reads `AGENTS.md` and finds the preflight skill in `.claude/skills/`. It does not look for skills above a git worktree, so execution sessions rely on the plan's `## Execution rules`, which every executor reads.
+- **OpenCode** reads `AGENTS.md` and finds the preflight skill in `.claude/skills/`. It does not look for skills above a git worktree, so execution sessions rely on the plan's `## Execution rules`, which the executing agent reads (implementer subagents get their task's steps).
 - Install Superpowers in each harness you use; Graphify's own skill is optional.
 
 ## Known limits

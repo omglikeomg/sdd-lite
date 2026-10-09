@@ -75,12 +75,14 @@ export function tickTasks(text, done) {
     .join('\n');
 }
 
+// Rulings from a Superpowers subagent-driven-development ledger (`.superpowers/sdd/<plan>/progress.md`)
+// that a run left behind: `Ruling: …` lines, and parked review findings, which the ledger writes as
+// `Task <N>: parked — <finding> — ruling: <why the code stands>`.
 export function rulingsFromLedger(ledgerText) {
   return ledgerText
     .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => /Ruling:/.test(l))
-    .map((l) => l.replace(/^[-*]\s+/, ''));
+    .map((l) => l.trim().replace(/^[-*]\s+/, ''))
+    .filter((l) => /\bruling:/i.test(l));
 }
 
 export function completionSection({ date, merged, rulings, deferred }) {

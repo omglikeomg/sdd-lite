@@ -21,10 +21,10 @@
 
 ## Execution rules
 
-- Work only inside the worktree created by `pnpm plan:start 000042 --repo api`.
+- Work only inside the worktree created by `pnpm plan:start 000042 --repo api`. Its dependencies are installed; skip the `npm install` of superpowers:using-git-worktrees.
 - Commit exactly as each task's commit step says; the hooks reject commits without `Task:`.
 - Do not tick checkboxes in this file; `pnpm plan:complete` does it from the commits.
-- Record every deviation from this plan as a `Ruling:` footer on the commit of the task it concerns: `--trailer "Ruling: <decision> — <why> — <cost if wrong>"`. A ruling made after the last task commit goes on that commit with `git commit --amend --no-edit --trailer "Ruling: …"` before pushing. Superpowers deletes its ledger when the final review is clean; the footers are what `pnpm plan:complete` copies into the plan.
+- If this plan is wrong, escalate to your human partner before deviating. Record their decision, and every reviewer finding you park, as a `Ruling:` footer for the task it concerns: `--trailer "Ruling: <decision> — <why> — <cost if wrong>"` on the task's commit, or, when that commit already exists, `git commit --allow-empty -m "chore(plan): record ruling" --trailer "Task: <n>" --trailer "Ruling: …"`. Never amend: review packages refer to commits by SHA. Superpowers deletes its ledger when the final review is clean; the footers are what `pnpm plan:complete` copies into the plan.
 - When the final review is clean, stop and ask your human partner for the go-ahead to push. Do not push before it.
 - After the go-ahead, finish with superpowers:finishing-a-development-branch choosing "Push and create a Pull Request", and let the hub do both steps: `pnpm plan:pr 000042 --repo api --scope payments --create` from the hub root in GitHub mode (it pushes, opens the PR and updates the tracking issue); otherwise push and paste the text that command prints. Never merge locally.
 - The PR body ends with the `Plan:`, `Task:` and `Ruling:` footers that the squash commit keeps; edit the prose if needed, never the footers.
@@ -87,11 +87,11 @@ What changed from the plain Superpowers format:
 |---|---|
 | `**Repo:**` and `**Branch:**` header lines | `pnpm plan:start` creates the branch named here; `pnpm check` verifies both |
 | `**Spec:**` is a relative Markdown link | `pnpm check` resolves it, and Graphify links plan to spec |
-| `## Execution rules` | The executing agent may run in a harness that cannot see the hub's `AGENTS.md`; every executor reads the plan |
+| `## Execution rules` | The executing agent may run in a harness that cannot see the hub's `AGENTS.md`; the executing agent (the controller, under subagent-driven development) reads the plan. Implementer subagents get only their task, so what they must do lives in the task's steps |
 | File paths relative to the product repository | The implementer works inside the product repository's worktree |
 | Test titles start with the acceptance-criteria ID | `pnpm check` links tests to `docs/features/` |
 | Commit steps carry `--trailer "Task: <n>"` and `Refs:` | Progress and traceability come from git history; the implementer subagent sees only its task |
-| Rulings are `Ruling:` footers | Superpowers deletes its ledger at the end of a run; git history is the record |
+| Rulings are `Ruling:` footers | Superpowers deletes its ledger when the final review is clean; git history is the record |
 
 `pnpm plan:complete` later appends a `## Completion` section like this one:
 

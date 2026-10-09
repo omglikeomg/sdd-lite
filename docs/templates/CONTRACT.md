@@ -7,8 +7,8 @@ consumers: [web]
 
 <!-- Template: copy to docs/contracts/<name>.md. A contract describes an interface one repository
      offers and others rely on: operations, types, errors, versioning. It is a living document:
-     it describes what main offers today. Cite the code on both sides with backticked paths
-     (`pnpm check` requires at least one per repository), link it from "How the repositories
+     it describes what main offers today. Cite the code on both sides as backticked `path::Symbol`
+     (`pnpm check` requires at least one path per repository; only the symbol form links the graph), link it from "How the repositories
      interact" in docs/ARCHITECTURE.md, and list it in a spec's "Documentation impact" whenever
      work changes it. A breaking change needs an ADR. -->
 

@@ -24,7 +24,8 @@ flowchart LR
 |---|---|
 | `docs/` | Living documents and records; see `docs/WORKFLOW.md` for the layout |
 | `tools/docs-check.mjs` | Every rule behind `pnpm check` |
-| `tools/plan.mjs` | `plan:*` (new, start, status, complete, pr, cleanup, revert) and `work:*` (start, cleanup) |
+| `tools/plan.mjs` | `plan:*` (new, start, status, complete, pr, cleanup, revert, abandon), `work:*` (start, pr, cleanup) and `epic:*` (new, pr) |
+| `tools/review.mjs` | `review:*` (start, cleanup): a pull request's head in a review worktree and its review context in `.reviews/` |
 | `tools/doctor.mjs` | `doctor`: read-only health check of a clone |
 | `tools/gh-setup.mjs` | `gh:setup`: turns GitHub mode on and creates labels |
 | `tools/lib/github.mjs` | Every GitHub call, through the `gh` CLI; the label catalogue |
@@ -43,6 +44,7 @@ flowchart LR
 | `.claude/skills/hub-workflow/SKILL.md` | Maps each stage of the work to the command that performs it |
 | `.claude/skills/onboard-repository/SKILL.md` | Drafts a new repository's architecture map from the knowledge graph |
 | `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in up to three rounds of questions, then writes the epic |
+| `.claude/skills/review-pull-request/SKILL.md` | Prepares a teammate's pull request with the hub's context and drafts review comments for a person to post |
 
 The tools are plain Node.js modules with no dependencies, so the hub needs nothing installed beyond Node, git and Graphify.
 
