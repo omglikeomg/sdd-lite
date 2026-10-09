@@ -10,6 +10,7 @@
     "hub:setup": "node tools/setup.mjs",
     "check": "node tools/docs-check.mjs",
     "repo:add": "node tools/repo.mjs add",
+    "repo:sync": "node tools/repo.mjs sync",
     "plan:new": "node tools/plan.mjs new",
     "plan:start": "node tools/plan.mjs start",
     "plan:status": "node tools/plan.mjs status",

@@ -400,6 +400,36 @@ test('work:start gives bounded work a fresh worktree without plan footers', () =
   assert.ok(!existsSync(wt));
 });
 
+test('repo:sync moves a pointer to the merged default branch and stages it', () => {
+  const api = join(hub, 'repos/api');
+  const before = git(api, 'rev-parse', 'HEAD').trim();
+  const dir = join(base, 'api-sync');
+  git(base, 'clone', '--quiet', apiBare, dir);
+  write(join(dir, 'src/billing/round.ts'), 'export const round = (n: number) => Math.round(n * 100) / 100;\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '--quiet', '-m', 'fix(billing): round invoice totals to the cent');
+  git(dir, 'push', '--quiet', 'origin', 'main');
+  const merged = git(dir, 'rev-parse', 'HEAD').trim();
+
+  write(join(api, 'scratch.txt'), 'edited in the submodule\n');
+  assert.match(toolFails('repo.mjs', 'sync', 'api'), /has local changes/);
+  rmSync(join(api, 'scratch.txt'));
+
+  assert.match(tool('repo.mjs', 'sync', 'api'), /repos\/api: \w+ -> \w+ \(1 commit\(s\) from origin\/main\); pointer staged/);
+  assert.equal(git(api, 'rev-parse', 'HEAD').trim(), merged);
+  assert.match(git(hub, 'ls-files', '-s', '--', 'repos/api'), new RegExp(`^160000 ${merged} `));
+  assert.match(tool('repo.mjs', 'sync', 'api'), /already at origin\/main/);
+
+  // A commit made directly in the checkout, on no branch, is not left behind silently.
+  write(join(api, 'src/billing/stray.ts'), 'export {};\n');
+  git(api, 'add', '-A');
+  git(api, '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', 'chore: stray commit');
+  assert.match(toolFails('repo.mjs', 'sync', 'api'), /which no branch contains/);
+
+  git(api, 'checkout', '--quiet', '--detach', before);
+  git(hub, 'reset', '--quiet', '--', 'repos/api');
+});
+
 test('the next plan gets 000002', () => {
   assert.match(tool('plan.mjs', 'new', 'refunds', '--repos', 'api'), /000002/);
 });
