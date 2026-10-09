@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs,cqrs] [--branch main]`
+// `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs] [--branch main]`
 import { parseArgs } from 'node:util';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';

@@ -82,7 +82,11 @@ test('setup: hub, product repo, gh:setup creates labels and records slugs', () =
   tool('setup.mjs');
 
   toolFails('gh-setup.mjs');
+  // An epic already in the hub gets its label; epics are folders, docs/epics/<slug>/.
+  write(join(hub, 'docs/epics/launch/README.md'), '---\ntype: epic\nstatus: draft\n---\n# Launch\n');
   const out = tool('gh-setup.mjs', '--hub-repo', 'acme/hub');
+  assert.ok(gh().labels['acme/hub'].includes('epic:launch'), 'label epic:launch');
+  rmSync(join(hub, 'docs/epics/launch'), { recursive: true });
   assert.match(out, /GitHub mode on; tracking issues live in acme\/hub/);
   const cfg = JSON.parse(readFileSync(join(hub, 'hub.config.json'), 'utf8'));
   assert.deepEqual(cfg.github, { enabled: true, hubRepo: 'acme/hub' });

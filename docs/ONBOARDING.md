@@ -32,7 +32,7 @@ graphify update .
 2. `docs/ARCHITECTURE.md`: the system map. Follow the link to the map of the repository you will work in, and to the contracts it offers or consumes.
 3. `docs/WORKFLOW.md`: the rules. Skim it now; you will come back to "Branches and commits" and "What `pnpm check` enforces".
 
-Then read `docs/EXAMPLES.md`: a bug fix, a feature, a new module and an epic, followed step by step on an example product. Afterwards, skim the ADRs listed under "Evolution" in the architecture document. They are short and explain why things are the way they are.
+Then read `docs/EXAMPLES.md`: a bug fix, a feature, a new module, an epic and a code review, followed step by step on an example product. Afterwards, skim the ADRs listed under "Evolution" in the architecture document. They are short and explain why things are the way they are.
 
 ## 3. Ask the graph (5 minutes)
 

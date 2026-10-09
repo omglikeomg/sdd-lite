@@ -19,7 +19,8 @@ try {
     if (!r.github) throw new HubError(`cannot tell the GitHub repository of ${r.path}; set "github": "owner/name" for it in hub.config.json`);
   }
   const epicsDir = join(HUB_ROOT, DIRS.epics);
-  const epics = existsSync(epicsDir) ? readdirSync(epicsDir).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, '')) : [];
+  // An epic is a folder, docs/epics/<slug>/, holding its README.md.
+  const epics = existsSync(epicsDir) ? readdirSync(epicsDir).filter((f) => existsSync(join(epicsDir, f, 'README.md'))) : [];
   const labels = [...STATIC_LABELS, ...cfg.repos.map((r) => repoLabel(r.name)), ...epics.map(epicLabel)];
   ensureLabels(hubRepo, labels);
   cfg.github = { enabled: true, hubRepo };

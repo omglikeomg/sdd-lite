@@ -19,8 +19,8 @@ Returning customers pay with a saved card in one step, cutting checkout abandonm
 
 <!-- hub: paste the graphify-preflight Context block. Every path in it was opened while writing it. -->
 
-Graph refreshed: `graphify update .` → "Rebuilt: 4,812 nodes, 9,733 edges, 61 communities" (2026-10-08)
-Document layer: up to date
+Graph refreshed: `graphify update .` → "Rebuilt: 4812 nodes, 9733 edges, 61 communities" (2026-10-08)
+Document layer: structure only
 
 **Existing code to reuse or extend**
 - `repos/api/src/payments/payments.service.ts::PaymentsService` already charges one-off cards through the provider SDK; saved-card charges extend it.

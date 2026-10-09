@@ -56,7 +56,10 @@ The hub records, for each product repository, the commit its documents describe.
 | `plan:start` / `work:start`: dependency install failed | The worktree runs `npm ci` / `pnpm install --frozen-lockfile` from the repository's own lockfile | Fix the lockfile in the product repository, or rerun with `--no-install` and install by hand |
 | The worktree already exists | You (or a previous session) started it before | Rerunning `plan:start` resumes it and reruns the hook self-test |
 | The agent chose "merge locally" when finishing | Superpowers then merges into the local `main` and deletes the worktree | The work is on the local branch and in local `main`: push the branch, open the PR, then reset local `main` with `git -C repos/x branch -f main origin/main` (only while that `main` is not checked out anywhere) |
-| No rulings in the Completion section | Superpowers deletes its ledger when a run finishes; rulings survive only as `Ruling:` footers | Nothing is lost if the agent followed the plan's execution rules; otherwise record them by hand in the completion PR |
+| No rulings in the Completion section | Superpowers deletes its ledger when the final review is clean; rulings survive only as `Ruling:` footers | Nothing is lost if the agent followed the plan's execution rules; otherwise record them by hand in the completion PR |
+| The agent offered to discard the work when finishing | Superpowers' discard removes the worktree, and its way of finding the main checkout does not work in a worktree of a submodule | Decline it. Planned work stops with `pnpm plan:abandon <id> --reason "…"`, bounded work with `pnpm work:cleanup <repo> <branch>` |
+| A brainstorming session wrote `docs/superpowers/specs/YYYY-MM-DD-….md` and `pnpm check` rejects it | Superpowers' default name; bounded work needs no spec file, planned work uses the path `plan:new` printed | Bounded: delete the file, the design in chat is enough. Planned: move it to the printed path |
+| A package-lock.json appeared in a pnpm or yarn worktree | `superpowers:using-git-worktrees` runs `npm install` wherever it finds a `package.json` | Delete it; `plan:start` and `work:start` already installed with the repository's own package manager |
 | A session started in `.worktrees/…` ignores the hub's rules (OpenCode) | OpenCode does not look for skills above a git worktree | Expected: execution rules travel inside the plan. Claude Code reads the hub's `CLAUDE.md` from the parent folder |
 
 ## Completing work
@@ -114,5 +117,7 @@ The hub records, for each product repository, the commit its documents describe.
 | Symptom | Why | Fix |
 |---|---|---|
 | An answer misses code you just merged | The graph is refreshed at fixed points, not continuously | `graphify update .` from the hub root |
-| `graphify-out/needs_update` exists | Documents changed; their LLM-extracted layer is stale | Before architectural design, ask whether to run `/graphify . --update` in your agent (it costs tokens) |
+| A document edit is missing from the graph after `graphify update .` | The clone ran the optional LLM pass (`graphify-out/cost.json` exists); documents it read are refreshed only by running it again | `/graphify . --update` in your agent (it costs tokens), or delete `graphify-out/` and run `graphify update .` to go back to the free layer |
+| `graphify explain` does not list a document that cites the class | It shows at most 20 connections, and only `path::Symbol` citations are edges | `graphify affected "<Symbol>"`; cite the code as `path::Symbol`, not a bare path |
+| `graphify explain "Class.method"` finds no node | Methods are named `.method()` in the graph | `graphify explain "<file>::<method>"`, e.g. `"src/billing/billing.service.ts::issue"` |
 | Graph answers include code from an unmerged branch | A submodule checkout is not at the hub's pointer | `git submodule update`, then `graphify update .` |

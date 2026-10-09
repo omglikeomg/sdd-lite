@@ -17,15 +17,16 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 
 | You are about to… | Run (from the hub root) | Then |
 |---|---|---|
-| Design anything | `graphify-preflight` skill, then `superpowers:brainstorming` | Brainstorming classifies the tier |
+| Design anything | Classify the tier out loud, then `graphify-preflight` and `superpowers:brainstorming` | Trivial and bounded: the design ends approved in chat, with no spec file and no `writing-plans` |
 | Onboard a product repository | `onboard-repository` skill (it runs `pnpm repo:add`, which builds the graph) | A person reviews the drafted map in the hub PR |
 | Turn a PRD or large outcome into an epic | `epic-design` skill (it runs `pnpm epic:new <slug> --prd <file>`) | Up to three rounds of questions before writing; then `pnpm epic:pr <slug>` |
 | Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
 | Start **trivial** or **bounded** work | `pnpm work:start <repo> <type>/<slug> [--issue <n>]` | Work in the printed worktree; with `--issue`, read the saved issue context first |
-| Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths |
+| Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths; decline writing-plans' offer to execute |
 | Open the spec PR | `pnpm check`, commit `docs(spec): <id> <slug>`, `pnpm plan:pr <id> --spec [--create]` | Ask your human partner before `--create` or any push |
 | Execute an approved plan | `pnpm plan:start <id> --repo <name>` | Start the session in the printed worktree |
-| Commit a plan task | `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" [--trailer "Refs: <ids>"] [--trailer "Ruling: <decision> — <why> — <cost>"]` | One commit per task; hooks add `Plan:`; every deviation from the plan is a `Ruling:` footer |
+| Commit a plan task | `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" [--trailer "Refs: <ids>"] [--trailer "Ruling: <decision> — <why> — <cost>"]` | One commit per task; hooks add `Plan:`; every deviation from the plan (decided with your human partner) and every parked review finding is a `Ruling:` footer |
+| Record a ruling after the task's commit | `git commit --allow-empty -m "chore(plan): record ruling" --trailer "Task: <n>" --trailer "Ruling: …"` | Never amend: Superpowers' reviews refer to commits by SHA |
 | Open a code PR | `superpowers:finishing-a-development-branch` → "Push and create a Pull Request": `pnpm plan:pr <id> --repo <name> --create` in GitHub mode, otherwise its printed text | Never merge locally |
 | Open a bounded PR | `pnpm work:pr <repo> <type>/<slug> [--create]` | Sections come from the commit body's `Cause:`/`Rationale:`, `Fix:`, `Verification:` paragraphs; it explains the fix on the issue it came from |
 | See progress | `pnpm plan:status [id]` | Never tick plan checkboxes by hand |
@@ -55,4 +56,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | "I'll just move the label to pending review" | Labels follow the commands; a hand-set label is overwritten at the next step. Run the step's command. |
 | "The task is tiny, it doesn't need a `Task:` footer" | The hook rejects it, and `plan:complete` counts on it. |
 | "I'll run the revert commands, QA already failed" | Reverts are outward and destructive. Print, show, wait. |
+| "Brainstorming says to write the spec and the plan" (bounded work) | The tier decides. Bounded work ends with an approved design in chat and `work:start`. |
+| "writing-plans offers to execute, I'll pick subagent-driven" | Decline. The spec PR merges first; `plan:start` and a new session in its worktree execute it. |
+| "The plan is wrong here, I'll decide and move on" | Escalate to your human partner, as Superpowers says; then record their decision as a `Ruling:`. |
 | "I'll copy the acceptance criteria into the feature doc now" | Living documents change in the completion PR; `plan:complete` moves them. |

@@ -16,10 +16,10 @@ Charges customers through the payment provider. Everything that moves money pass
 
 | File | Role |
 |---|---|
-| `repos/api/src/payments/payments.controller.ts` | `POST /orders/:id/payments` and the saved-card variant |
-| `repos/api/src/payments/payments.service.ts` | Charging, idempotency keys, decline mapping |
-| `repos/api/src/payments/provider.client.ts` | Thin wrapper around the provider SDK; the only file that imports it |
-| `repos/api/src/payments/webhooks.controller.ts` | Verifies and applies provider webhooks |
+| `repos/api/src/payments/payments.controller.ts::PaymentsController` | `POST /orders/:id/payments` and the saved-card variant |
+| `repos/api/src/payments/payments.service.ts::PaymentsService` | Charging, idempotency keys, decline mapping |
+| `repos/api/src/payments/provider.client.ts::ProviderClient` | Thin wrapper around the provider SDK; the only file that imports it |
+| `repos/api/src/payments/webhooks.controller.ts::WebhooksController` | Verifies and applies provider webhooks |
 
 ## Flow
 

@@ -6,8 +6,9 @@ type: architecture
 <!-- Template: copy to docs/codebases/<repo>/ARCHITECTURE.md when onboarding a repository, link it from
      the "Product repositories" table in docs/ARCHITECTURE.md, and keep it under about 200 lines.
      Every structural file listed in hub.config.json "mustDocument" must be named here by
-     backticked path or covered by an area document's `paths`. Graphify links backticked paths to
-     the code; it skips diagrams, so name each box in the prose too. -->
+     backticked path or covered by an area document's `paths`. Cite code as `path::Symbol`: Graphify
+     links only that form to the code (a bare path is checked but not linked). It skips diagrams, so
+     name each box in the prose too. -->
 
 The API serves the web app and partner integrations: catalogue, orders, payments and invoicing. NestJS 11 on Node 20, deployed by the infra repository as an SST `Service` behind an Application Load Balancer.
 
@@ -22,11 +23,11 @@ The API serves the web app and partner integrations: catalogue, orders, payments
 
 | Module | Responsibility | Details |
 |---|---|---|
-| `repos/api/src/app.module.ts` | Wires every module, global pipes and config | this page |
-| `repos/api/src/catalogue/catalogue.module.ts` | Products, prices, stock | this page |
-| `repos/api/src/orders/orders.module.ts` | Order lifecycle from cart to fulfilment | this page |
-| `repos/api/src/payments/payments.module.ts` | Charges through the payment provider | [payments area](architecture/payments.md) |
-| `repos/api/src/billing/billing.module.ts` | Invoices and credit notes | [billing area](architecture/billing.md) |
+| `repos/api/src/app.module.ts::AppModule` | Wires every module, global pipes and config | this page |
+| `repos/api/src/catalogue/catalogue.module.ts::CatalogueModule` | Products, prices, stock | this page |
+| `repos/api/src/orders/orders.module.ts::OrdersModule` | Order lifecycle from cart to fulfilment | this page |
+| `repos/api/src/payments/payments.module.ts::PaymentsModule` | Charges through the payment provider | [payments area](architecture/payments.md) |
+| `repos/api/src/billing/billing.module.ts::BillingModule` | Invoices and credit notes | [billing area](architecture/billing.md) |
 
 ```mermaid
 flowchart LR
