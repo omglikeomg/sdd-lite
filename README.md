@@ -12,7 +12,7 @@ New here? Read `docs/ONBOARDING.md`, then `docs/EXAMPLES.md` (five pieces of wor
 
 Coding agents are fast but forgetful: they reinvent modules that already exist, skip planning, and leave changes nobody can trace later. People joining a project face the same problem without the speed. The hub answers with three things:
 
-- **A method.** [Superpowers](https://github.com/obra/superpowers) skills take every change through design, planning, test-driven execution and review. The hub uses them unchanged and adds its own rules on top, starting with a classification that scales the ceremony to the change.
+- **A method.** [Superpowers](https://github.com/obra/superpowers) skills take every change through classification, design, planning, test-driven execution and review. The hub uses them unchanged and adds its own rules on top.
 - **A memory.** [Graphify](https://github.com/Graphify-Labs/graphify) builds one knowledge graph over every product repository and every document in the hub. Every design starts by asking it what already exists.
 - **Checks.** `pnpm check`, git hooks and CI verify that documents, tests and commits agree, so traceability is a fact rather than a promise.
 

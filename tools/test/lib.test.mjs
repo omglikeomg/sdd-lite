@@ -127,9 +127,10 @@ test('plans: parse, tick, completion', () => {
   assert.deepEqual(rulingsFromLedger('# progress\n- Ruling: kept Stripe SDK v14 — v15 breaks webhooks — rework if upgraded\nTask 1 done'), [
     'Ruling: kept Stripe SDK v14 — v15 breaks webhooks — rework if upgraded',
   ]);
-  // Subagent-driven development writes parked review findings with a lower-case "ruling:".
-  assert.deepEqual(rulingsFromLedger('Task 2: parked — reviewer wants a cache — ruling: one call per request, no cache needed\nTask 2: complete'), [
-    'Task 2: parked — reviewer wants a cache — ruling: one call per request, no cache needed',
+  // Parked review findings carry their ruling inside the line; older Superpowers wrote it lower-case.
+  assert.deepEqual(rulingsFromLedger('Task 2: parked — reviewer wants a cache — Ruling: one call per request\nTask 3: parked — x — ruling: y\nTask 2: complete'), [
+    'Task 2: parked — reviewer wants a cache — Ruling: one call per request',
+    'Task 3: parked — x — ruling: y',
   ]);
 });
 

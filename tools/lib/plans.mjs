@@ -76,8 +76,8 @@ export function tickTasks(text, done) {
 }
 
 // Rulings from a Superpowers subagent-driven-development ledger (`.superpowers/sdd/<plan>/progress.md`)
-// that a run left behind: `Ruling: …` lines, and parked review findings, which the ledger writes as
-// `Task <N>: parked — <finding> — ruling: <why the code stands>`.
+// that a run left behind: `Ruling: …` lines, including parked review findings
+// (`Task <N>: parked — <finding> — Ruling: <why the code stands>`; older releases wrote `ruling:`).
 export function rulingsFromLedger(ledgerText) {
   return ledgerText
     .split('\n')

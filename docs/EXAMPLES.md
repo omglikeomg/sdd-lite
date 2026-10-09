@@ -178,7 +178,7 @@ Marco reviews and squash merges. GitHub closes #12 through `Fixes`, with the exp
 The hub PR with `NOTES-EDIT-3` now also moves the `api` submodule pointer to the merged fix, so `pnpm check` sees the test that proves the new criterion:
 
 ```bash
-git -C repos/api fetch && git -C repos/api checkout --detach origin/main && git add repos/api
+pnpm repo:sync api
 pnpm check
 git commit -m "docs(features): NOTES-EDIT-3 partial note updates"
 ```
@@ -296,7 +296,7 @@ $ pnpm plan:start 000020 --repo api
     Execute the plan …/docs/superpowers/plans/000020-bulk-edit--api.md with superpowers:subagent-driven-development
 ```
 
-#20 moves back to `status:ongoing`. In each worktree, `superpowers:subagent-driven-development` dispatches a fresh implementer per task, reviews each task, and finishes with a whole-branch review. Before dispatching anything, the API run's pre-flight scan finds that the plan's validation step would reject an empty tag list, which the spec allows. A wrong plan is not the agent's to fix alone, so it asks Lucía which governs. She answers that an empty list means "no tag change", and the agent records her decision on the task's commit:
+#20 moves back to `status:ongoing`. In each worktree, `superpowers:subagent-driven-development` dispatches a fresh implementer per task, reviews each task, and finishes with a whole-branch review. Along the way the API agent finds that the plan's validation step would reject an empty tag list, which the spec allows. The spec is the binding authority, so it rules without stopping and records the decision on the task's commit:
 
 ```
 Ruling: accept an empty tag list as "no tag change" — the spec allows it and the plan's check did not — one extra validation case if product disagrees

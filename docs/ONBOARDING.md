@@ -64,7 +64,7 @@ Pick a Bounded change: a small fix in a flow that already exists. It is also the
 
 3. Implement with tests first. Commit with a Conventional Commit, for example `fix(billing): round invoice totals half-up`. The hooks will tell you if the message or branch name is off.
 4. Push and open a PR in the product repository. Squash merge it with a Conventional Commit title, then `pnpm work:cleanup <repo> fix/<short-slug>`.
-5. If the change altered behaviour described in `docs/features/` or structure described in `docs/codebases/`, open a hub PR updating those documents, and run `pnpm check` first.
+5. If the change altered behaviour described in `docs/features/` or structure described in `docs/codebases/`, open a hub PR updating those documents, with `pnpm repo:sync <repo>` to move the repository's pointer to your merged fix, and run `pnpm check` first.
 
 If your first Architectural change follows the longer flow in `docs/WORKFLOW.md`; pair with someone who has done one.
 

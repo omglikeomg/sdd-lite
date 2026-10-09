@@ -67,7 +67,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 
 ## Work tiers
 
-Superpowers has one path for every change: brainstorming, a written spec, a plan, execution. The hub scales it: the agent classifies every request into one of four tiers out loud before designing (`AGENTS.md`), and only architectural work and epic phases take the full Superpowers path.
+Superpowers' brainstorming classifies every request out loud as a spike, bounded or architectural change, and follows a different path for each. We add one tier below it and one above it; spikes follow Superpowers (see "Spikes").
 
 | Tier | Example | What you produce | IDs |
 |---|---|---|---|
@@ -95,10 +95,19 @@ When in doubt, take the heavier tier. Hidden complexity found mid-task moves wor
 
 That rule protects quality; it is not a preference for ceremony. When a change genuinely fits one repository and an existing flow, **bounded work is the recommended path**: one PR and a fraction of the agent cost (in our pilot, about $0.40 for a bug fix against about $11 for a feature across two repositories). People can split a large idea into bounded steps; the architectural path is for work whose design must be reviewed and kept. Bugs start with `superpowers:systematic-debugging` and are Bounded unless the root cause turns out to be architectural.
 
+### Trivial work
+
+A change whose correctness is obvious from the diff: a typo, a dependency patch or minor bump, a config value, a comment.
+
+1. Say the classification and the change in one line. No preflight and no design discussion.
+2. `pnpm work:start api chore/bump-prisma` (or `fix/`, `docs/`…), one Conventional Commit in the worktree, `pnpm work:pr`, squash merge, `pnpm work:cleanup`. The hooks still check the commit; nothing else applies.
+
+It moves up to Bounded as soon as it changes behaviour a feature document describes, touches a structural file (`mustDocument`), needs a major dependency version, or needs more than a sentence to justify.
+
 ### Bounded work
 
 1. Graph preflight (see below), scaled down: one or two queries.
-2. Brainstorming presents a short design in chat; nothing starts before a person says yes. Its later steps do not apply here: no spec file, no `superpowers:writing-plans`. The approved design in chat is the design; the next step is `work:start`.
+2. Brainstorming's bounded path presents a short design in chat and writes no spec or plan; nothing starts before a person says yes. The next step is `work:start`.
 3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
 4. Commit with a body made of labelled paragraphs, which `work:pr` turns into the PR's sections:
 
@@ -115,7 +124,7 @@ That rule protects quality; it is not a preference for ceremony. When a change g
 
    Use `Cause:` for a bug and `Rationale:` for any other change; `Context:` and `Risk:` are optional.
 5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Risk, footers); with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
-6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR; add a new criterion before committing the code, because the commit hook only accepts `Refs:` IDs the hub defines). If structure changed, update the repository's architecture docs. Once the code PR is merged, that hub PR also moves the repository's submodule pointer to it (`git -C repos/api fetch && git -C repos/api checkout --detach origin/main && git add repos/api`), so `pnpm check` sees the code the documents now describe. Bounded work that changes no document leaves the pointer alone; the next completion moves it.
+6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR; add a new criterion before committing the code, because the commit hook only accepts `Refs:` IDs the hub defines). If structure changed, update the repository's architecture docs. Once the code PR is merged, that hub PR also moves the repository's submodule pointer to it with `pnpm repo:sync api` (it fetches, checks out the default branch, stages the pointer and refreshes the graph), so `pnpm check` sees the code the documents now describe. Bounded work that changes no document leaves the pointer alone; the next completion moves it.
 7. `pnpm work:cleanup api fix/login-redirect` removes the worktree and local branch.
 
 ### Architectural work
@@ -303,7 +312,7 @@ Refs: CHECKOUT-PAY-2, ADR-0012
 - `Plan:` is added automatically from the branch name.
 - `Task:` names the plan task the commit completes (`Task: 3, 4` if one commit finishes two).
 - `Refs:` lists ADR numbers and acceptance-criteria IDs; every one must exist.
-- `Ruling:` records a decision taken during execution where the plan was wrong or silent, and every reviewer finding the run parked: `Ruling: <decision> — <why> — <cost if wrong>`. Superpowers escalates a wrong plan to the person, so the decision is usually theirs; the executing agent records it. When the task commit already exists, the record is an empty commit (`git commit --allow-empty -m "chore(plan): record ruling" --trailer "Task: <n>" --trailer "Ruling: …"`), never an amend: Superpowers' review packages refer to commits by SHA. Subagent-driven development keeps parked findings in a ledger it deletes when the final review is clean, so the footer is the durable copy.
+- `Ruling:` records a decision taken during execution where the plan was wrong or silent, and every review finding the run parked: `Ruling: <decision> — <why> — <cost if wrong>`. Superpowers makes these decisions without stopping and keeps them in a ledger it deletes when the final review is clean (its last message lists them under "Rulings I made"), so the footer is the durable copy. When the task commit already exists, the record is an empty commit (`git commit --allow-empty -m "chore(plan): record ruling" --trailer "Task: <n>" --trailer "Ruling: …"`), never an amend: the ledger and the review packages refer to commits by SHA.
 
 Code PRs are squash merged. Configure each product repository on GitHub with squash merging and the default squash message "Pull request title and description": the title generated by `pnpm plan:pr` becomes the commit header, and its body, which ends with the `Plan:` and `Task:` footers, becomes the commit body. One squash commit per repository per plan makes a failed feature easy to find and revert:
 
@@ -425,8 +434,9 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | Command | Does |
 |---|---|
 | `pnpm hub:setup` | Checks Node 20+, git 2.36+, Graphify 0.9.80+; checks out submodules; installs hooks; sets the hub's `submodule.recurse=true` and `push.recurseSubmodules=check` |
-| `pnpm doctor` | Read-only health check: versions, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
+| `pnpm doctor` | Read-only health check: versions (and whether they differ from the ones the hub was verified with), the Superpowers texts the hub relies on, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
 | `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs] [--branch main]` | Adds a product repository as a submodule and configures it |
+| `pnpm repo:sync <name>` | Moves the repository's submodule pointer to its freshly fetched default branch and stages it, for the hub PR that documents merged bounded work or resolves a pointer conflict |
 | `pnpm epic:new <slug> [--prd <file>] [--issue <n>] [--title "…"]` | Starts an epic: branch `docs/epic-<slug>`, the PRD stored as `prd.md`, the epic's issue in GitHub mode |
 | `pnpm epic:pr <slug> [--create]` | The epic's design PR (or, once it is done, its closing PR); `--create` opens it and comments on the epic's issue |
 | `pnpm plan:new <slug> --repos <a,b> [--type feat] [--epic <slug>] [--issue <n>] [--title "…"]` | Allocates an ID (the tracking issue's number in GitHub mode), creates the spec branch, prints paths |
@@ -464,6 +474,15 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. It loads `CLAUDE.md` files from parent directories, so sessions started in `.worktrees/…` still get the hub's rules.
 - **OpenCode** reads `AGENTS.md` and finds the preflight skill in `.claude/skills/`. It does not look for skills above a git worktree, so execution sessions rely on the plan's `## Execution rules`, which the executing agent reads (implementer subagents get their task's steps).
 - Install Superpowers in each harness you use; Graphify's own skill is optional.
+
+## Tested with
+
+The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 6.4.1**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers.
+
+- `pnpm doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
+- `pnpm test` runs `tools/test/compat.test.mjs`, which builds a small graph with the installed Graphify and checks every behaviour the preflight and the reviews use. Each part skips itself when its tool is missing, as in CI.
+
+After upgrading either tool, run `pnpm test`. When it passes, update the numbers here and in `TESTED`; when it fails, adjust the rule that depends on the changed behaviour.
 
 ## Known limits
 

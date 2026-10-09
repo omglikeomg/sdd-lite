@@ -10,14 +10,30 @@ import { parsePlanFilename } from './lib/conventions.mjs';
 import { parsePlan } from './lib/plans.mjs';
 import { prerequisiteProblems, HUB_GIT_CONFIG } from './setup.mjs';
 import { requireGh } from './lib/github.mjs';
+import { TESTED, findSuperpowers, superpowersProblems, compareVersions } from './lib/compat.mjs';
 
 const results = [];
 const ok = (msg) => results.push({ ok: true, msg });
 const bad = (msg, fix) => results.push({ ok: false, msg, fix });
+// Worth knowing, not a failure.
+const note = (msg) => results.push({ ok: true, note: true, msg });
 
 const pre = prerequisiteProblems();
 if (pre.length) for (const p of pre) bad(p, 'install or upgrade, then rerun `pnpm doctor`');
 else ok('Node, git and Graphify versions');
+
+// The hub's rules depend on how Graphify and Superpowers behave; tools/lib/compat.mjs lists what.
+const graphifyVersion = /(\d+\.\d+\.\d+)/.exec(spawnSync('graphify', ['--version'], { encoding: 'utf8' }).stdout || '')?.[1];
+if (graphifyVersion && compareVersions(graphifyVersion, TESTED.graphify) !== 0) {
+  note(`Graphify ${graphifyVersion}; the hub was verified with ${TESTED.graphify}. Run \`pnpm test\` (tools/test/compat.test.mjs) to check the behaviours it relies on`);
+}
+const sp = findSuperpowers();
+if (!sp) note('Superpowers not found in Claude Code\'s or OpenCode\'s plugin folders; install it (docs/ONBOARDING.md), or set SUPERPOWERS_DIR if it lives elsewhere');
+else {
+  const problems = superpowersProblems(sp.dir);
+  for (const p of problems) bad(`Superpowers ${sp.version}: ${p}`, 'read the changed skill and adjust the hub rule that depends on it (docs/WORKFLOW.md, "Tested with")');
+  if (!problems.length) ok(`Superpowers ${sp.version}${sp.version === TESTED.superpowers ? '' : ` (verified with ${TESTED.superpowers}; the texts the hub relies on are present)`}`);
+}
 
 const hooksDir = git(HUB_ROOT, ['rev-parse', '--path-format=absolute', '--git-path', 'hooks']);
 const missingHub = HUB_HOOKS.filter((h) => !existsSync(join(hooksDir, h)) || !readFileSync(join(hooksDir, h), 'utf8').includes(MARKER));
@@ -66,7 +82,7 @@ for (const name of existsSync(plansDir) ? readdirSync(plansDir) : []) {
   }
 }
 
-for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.msg}${r.ok ? '' : `\n    fix: ${r.fix}`}`);
+for (const r of results) console.log(`${r.note ? '!' : r.ok ? '✔' : '✖'} ${r.msg}${r.ok ? '' : `\n    fix: ${r.fix}`}`);
 const failed = results.filter((r) => !r.ok).length;
 console.log(failed ? `\n[doctor] ${failed} problem(s)` : '\n[doctor] ok');
 process.exit(failed ? 1 : 0);
