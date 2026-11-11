@@ -114,7 +114,7 @@ Then add a board column or table group per `status:*` label, and filters by `rep
 The commands write every PR the hub opens, so they read the same everywhere:
 
 - **Code PRs** (`plan:pr --repo`): Context (goal, design, tracking issue), What changed (tasks and files), Acceptance criteria, Decisions made during implementation, Review focus (from the plan), How it was verified, then the `Plan:`, `Task:` and `Ruling:` footers.
-- **Fix PRs** (`work:pr`): Context (the issue it came from), Root cause or Rationale, What changed, How it was verified, Risk, then `Fixes` and `Refs:`. The sections come from labelled paragraphs in the commit body (`Cause:`, `Rationale:`, `Fix:`, `Verification:`, `Risk:`), described in `docs/WORKFLOW.md`.
+- **Fix PRs** (`work:pr`): Context (the issue it came from), Root cause or Rationale, What changed, How it was verified, Merge danger (door and blast radius), then `Fixes` and `Refs:`. The sections come from labelled paragraphs in the commit body (`Cause:`, `Rationale:`, `Fix:`, `Verification:`, `Door:`, `Blast radius:`), described in `docs/WORKFLOW.md`.
 - **Hub PRs written by hand** use `.github/pull_request_template.md`.
 
 ## Continuous integration

@@ -124,7 +124,8 @@ became undefined and Prisma wrote them as NULL.
 Fix: the command carries only the fields present in the request, and
 Note.update() changes only those.
 Verification: NOTES-EDIT-3 covers a title-only PATCH; the full suite passes.
-Risk: none for clients that send full objects; they behave as before.
+Door: two-way; no schema change, reverting the squash restores the old update.
+Blast radius: clients that send partial objects; those sending full objects behave as before.
 
 Refs: NOTES-EDIT-3
 ```
@@ -162,8 +163,10 @@ NOTES-EDIT-3 covers a title-only PATCH; the full suite passes.
 Tests added or changed:
 - `apps/api/src/notes/application/commands/update-note/update-note.handler.spec.ts`
 
-## Risk
-None for clients that send full objects; they behave as before.
+## Merge danger
+**Door:** 🔄 two-way; no schema change, reverting the squash restores the old update.
+
+**Blast radius:** clients that send partial objects; those sending full objects behave as before.
 
 Fixes acme/notes-hub#12
 Refs: NOTES-EDIT-3

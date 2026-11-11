@@ -13,7 +13,7 @@ import { loadAcDefinitions } from '../lib/hub.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { explanationSections, fixPrBody, featurePrBody } from '../lib/pr-text.mjs';
+import { explanationSections, fixPrBody, featurePrBody, oneWaySigns } from '../lib/pr-text.mjs';
 
 test('plan branches carry type, six-digit ID and slug', () => {
   assert.deepEqual(parsePlanBranch('feat/000042-checkout-payments'), { type: 'feat', id: '000042', slug: 'checkout-payments' });
@@ -133,14 +133,52 @@ test('weakened checks are found in a diff', () => {
   assert.deepEqual(weakenedChecks(withContext, isTest).map((w) => w.line), [3], 'context lines count towards line numbers');
 });
 
-test('weakened checks get their own PR section, absent when there are none', () => {
-  const args = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], sections: explanationSections(['Risk: low.']), refs: [], fixesRef: null };
-  assert.doesNotMatch(fixPrBody(args), /Checks weakened/);
+test('weakened checks feed the blast radius in bounded PRs and get their own section in planned ones', () => {
+  const args = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], sections: explanationSections(['Blast radius: low.']), refs: [], fixesRef: null };
+  assert.doesNotMatch(fixPrBody(args), /Checks weakened|weakens/);
   const weakened = [{ kind: 'suppression', file: 'src/a.ts', line: 11, text: '// @ts-ignore' }, { kind: 'deleted-test', file: 'src/b.spec.ts', line: null, text: 'test file deleted' }];
-  assert.match(fixPrBody({ ...args, weakened }), /## Checks weakened\n\n- suppression: `src\/a\.ts:11` `\/\/ @ts-ignore`\n- deleted test: `src\/b\.spec\.ts` test file deleted\n\n## Risk/);
+  assert.match(fixPrBody({ ...args, weakened }), /\*\*Blast radius:\*\* low\.\n\nChecks this change weakens:\n\n- suppression: `src\/a\.ts:11` `\/\/ @ts-ignore`\n- deleted test: `src\/b\.spec\.ts` test file deleted/);
   const feature = { goal: 'g', specRel: 's', trackingRef: null, tasks: '- t', files: [], tests: [], criteria: '- c', rulings: [], reviewFocus: '', footers: 'Plan: 000001' };
   assert.doesNotMatch(featurePrBody(feature), /Checks weakened/);
   assert.match(featurePrBody({ ...feature, weakened }), /## Checks weakened\n\n- suppression[\s\S]*\n\nPlan: 000001$/);
+});
+
+test('commit bodies state the door and the blast radius; Risk: still reads as the blast radius', () => {
+  const s = explanationSections(['Fix: drop the column.\nDoor: one-way — the column is dropped.\nBlast radius: clients reading `title`.']);
+  assert.equal(s.door, 'one-way — the column is dropped.');
+  assert.equal(s.blast, 'clients reading `title`.');
+  assert.equal(explanationSections(['Risk: none; valid buckets behave as before.']).blast, 'none; valid buckets behave as before.');
+});
+
+test('one-way signs come from migrations, SQL and code a contract this repository provides cites', () => {
+  const files = [{ status: 'A', path: 'prisma/migrations/20261111_drop/migration.sql' }, { status: 'M', path: 'db/seed.sql' },
+    { status: 'M', path: 'src/billing/billing.service.ts' }, { status: 'M', path: 'src/web/client.ts' }, { status: 'M', path: 'src/other.ts' }];
+  const contracts = [
+    { rel: 'docs/contracts/billing-api.md', text: '---\nprovider: api\nconsumers: [web]\n---\nIssued by `repos/api/src/billing/billing.service.ts::BillingService`, shown by `repos/web/x.tsx`.\n' },
+    { rel: 'docs/contracts/web-events.md', text: '---\nprovider: web\nconsumers: [api]\n---\nConsumed by `repos/api/src/web/client.ts`.\n' },
+  ];
+  assert.deepEqual(oneWaySigns(files, 'api', contracts), [
+    { path: 'prisma/migrations/20261111_drop/migration.sql', why: 'migration' },
+    { path: 'db/seed.sql', why: 'SQL' },
+    { path: 'src/billing/billing.service.ts', why: 'contract `docs/contracts/billing-api.md`' },
+  ]);
+  assert.deepEqual(oneWaySigns([{ status: 'M', path: 'src/other.ts' }], 'api', contracts), []);
+});
+
+test('the PR states its merge danger: written door first, then inferred one-way, else not stated', () => {
+  const base = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], refs: [], fixesRef: null };
+  const signs = [{ path: 'prisma/migrations/1/migration.sql', why: 'migration' }];
+  const pr = (bodies, oneWay = []) => fixPrBody({ ...base, sections: explanationSections(bodies), oneWay });
+  const danger = (body) => body.slice(body.indexOf('## Merge danger'));
+  assert.doesNotMatch(pr(['Fix: y.']), /## Risk/);
+  assert.match(danger(pr(['Fix: y.'])), /^## Merge danger\n\n\*\*Door:\*\* 🤔 not stated\n\n\*\*Blast radius:\*\* not stated$/);
+  assert.match(pr(['Door: one-way — drops a column.\nBlast radius: title readers.']), /\*\*Door:\*\* ⛔ one-way — drops a column\.\n\n\*\*Blast radius:\*\* title readers\./);
+  assert.match(pr(['Door: two-way; a revert restores it.']), /\*\*Door:\*\* 🔄 two-way; a revert restores it\.\n\n\*\*Blast/);
+  assert.match(pr(['Fix: y.'], signs), /\*\*Door:\*\* ⛔ one-way \(inferred from the diff\)\n\n- `prisma\/migrations\/1\/migration\.sql` \(migration\)\n\n\*\*Blast/);
+  assert.match(pr(['Door: two-way, the migration only adds a nullable column.'], signs),
+    /\*\*Door:\*\* 🔄 two-way, the migration only adds a nullable column\. \(author\)\n\nThe diff touches files that usually mean one-way:\n\n- `prisma\/migrations\/1\/migration\.sql` \(migration\)/);
+  assert.match(pr(['Door: two-way.', 'Door: one-way — sends emails.']), /\*\*Door:\*\* ⛔ two-way\.\n\none-way — sends emails\./, 'any one-way commit makes the PR one-way');
+  assert.match(pr(['Door: probably fine.']), /\*\*Door:\*\* 🤔 probably fine\./, 'a door that names neither way is not stated');
 });
 
 test('frontmatter parsing and editing', () => {
