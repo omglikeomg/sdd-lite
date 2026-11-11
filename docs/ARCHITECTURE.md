@@ -50,6 +50,7 @@ flowchart LR
 | `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in rounds of questions that each ask only what can be answered now, then writes the epic |
 | `.claude/skills/wait-what/SKILL.md` | Explains a term from the glossary, specs and code when a person asks, and proposes a missing glossary entry |
 | `.claude/skills/review-pull-request/SKILL.md` | Prepares a teammate's pull request with the hub's context and drafts review comments for a person to post |
+| `.claude/skills/hub-retro/SKILL.md` | Proposes hub changes (checks first, written rules last) from recurring rulings, review findings, check failures and abandon reasons; edits nothing |
 
 The tools are plain Node.js modules with no dependencies, so the hub needs nothing installed beyond Node, git and Graphify.
 
