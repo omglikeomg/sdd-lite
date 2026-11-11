@@ -43,6 +43,8 @@
 
 ### Task 1: Charge a saved card in PaymentsService
 
+**Blocked by:** None
+
 **Files:**
 - Modify: `src/payments/payments.service.ts`
 - Test: `src/payments/payments.service.spec.ts`
@@ -92,8 +94,25 @@ What changed from the plain Superpowers format:
 | `## Execution rules` | The executing agent may run in a harness that cannot see the hub's `AGENTS.md`; the executing agent (the controller, under subagent-driven development) reads the plan. Implementer subagents get only their task, so what they must do lives in the task's steps |
 | File paths relative to the product repository | The implementer works inside the product repository's worktree |
 | Test titles start with the acceptance-criteria ID | `pnpm check` links tests to `docs/features/` |
+| Every task has a `**Blocked by:**` line | Your human partner approves the order from the task list; `pnpm check` verifies the line |
 | Commit steps carry `--trailer "Task: <n>"` and `Refs:` | Progress and traceability come from git history; the implementer subagent sees only its task |
 | Rulings are `Ruling:` footers | Superpowers deletes its ledger when the final review is clean; git history is the record |
+
+## Tasks and their order
+
+Each task is a vertical slice, a tracer bullet: a narrow path through every layer it needs (data, logic, interface, tests) that ends in something testable on its own, never one layer of the whole feature.
+
+`**Blocked by:**` sits under the task heading: `None`, or the earlier tasks of the same plan it needs (`Task 1, Task 3`). A task never waits for a later one; `pnpm check` rejects that, a missing line and any other form.
+
+Order the tasks by these rules, in this order of precedence:
+
+1. **Prefactor first.** Make the change easy, then make the easy change: a refactor that keeps behaviour and makes room for the feature is its own task, before the feature.
+2. **Contract first across repositories.** When repositories meet at a contract, the producer's plan opens with the contract (types, schema, endpoint shape) and the consumer's plan builds against the contract the spec fixes. `Blocked by:` never crosses plans.
+3. **Riskiest first.** Among tasks the first two rules leave free, the one most likely to prove the design wrong goes first.
+
+A wide refactor (one mechanical change whose call sites span the codebase) cannot land as one green slice. Sequence it as expand–contract: one task adds the new form beside the old, migration tasks move the call sites in batches (each `Blocked by:` the expand task), and a final task removes the old form (`Blocked by:` every batch). Above about 500 mechanical edits (Rule of 500), a batch is a codemod the task writes and runs, not hand edits.
+
+After writing-plans saves the plan, show your human partner its task list, one line per task: the title, `Blocked by:` and the test seam (the task's `Test:` file and the test that proves it). Wait for their approval before the spec PR; the list takes the place of writing-plans' request to review the whole plan.
 
 `pnpm plan:complete` later appends a `## Completion` section like this one:
 
