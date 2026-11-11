@@ -5,7 +5,7 @@ This repository is the hub: specs, decisions and plans for the product repositor
 ## Always
 
 1. Use the Superpowers skills unchanged. Your human partner speaks in plain words; the `hub-workflow` skill maps each stage of the work to the hub command that performs it. Never recreate a command's steps by hand.
-2. Ask before anything leaves this machine: pushing, opening or merging pull requests, every `--create`, every GitHub write. A go-ahead covers the action it was given for, not the next one.
+2. Ask before anything leaves this machine: pushing, opening or merging pull requests, every `--create`, every GitHub write. Also stop and ask before a schema change, a new runtime dependency or a CI configuration change that the approved design or plan does not name. A go-ahead covers the action it was given for, not the next one.
 3. `pnpm check` must pass before any hub commit. Fix the cause of a failure; never bypass hooks with `--no-verify`. If you believe a check itself is wrong, stop and explain why instead of working around it.
 4. No placeholder text (`TBD`, `TODO`, `insert here`) in any document.
 
