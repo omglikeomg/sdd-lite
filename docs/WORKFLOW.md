@@ -434,7 +434,7 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | Command | Does |
 |---|---|
 | `pnpm hub:setup` | Checks Node 20+, git 2.36+, Graphify 0.9.80+; checks out submodules; installs hooks; sets the hub's `submodule.recurse=true` and `push.recurseSubmodules=check` |
-| `pnpm doctor` | Read-only health check: versions (and whether they differ from the ones the hub was verified with), the Superpowers texts the hub relies on, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
+| `pnpm hub:doctor` | Read-only health check: versions (and whether they differ from the ones the hub was verified with), the Superpowers texts the hub relies on, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
 | `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs] [--branch main]` | Adds a product repository as a submodule and configures it |
 | `pnpm repo:sync <name>` | Moves the repository's submodule pointer to its freshly fetched default branch and stages it, for the hub PR that documents merged bounded work or resolves a pointer conflict |
 | `pnpm epic:new <slug> [--prd <file>] [--issue <n>] [--title "…"]` | Starts an epic: branch `docs/epic-<slug>`, the PRD stored as `prd.md`, the epic's issue in GitHub mode |
@@ -479,7 +479,7 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 
 The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 7.0.2**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers. Superpowers 7.0.0, which the official marketplace still installs, passes the same checks.
 
-- `pnpm doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
+- `pnpm hub:doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
 - `pnpm test` runs `tools/test/compat.test.mjs`, which builds a small graph with the installed Graphify and checks every behaviour the preflight and the reviews use. Each part skips itself when its tool is missing, as in CI.
 
 After upgrading either tool, run `pnpm test`. When it passes, update the numbers here and in `TESTED`; when it fails, adjust the rule that depends on the changed behaviour.

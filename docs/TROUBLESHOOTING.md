@@ -5,7 +5,7 @@ Problems you can run into with the hub, why they happen, and how to get out. Mos
 Three commands tell you where you stand; run them first:
 
 ```bash
-pnpm doctor        # is this clone set up? (tools, hooks, submodules, gh account)
+pnpm hub:doctor    # is this clone set up? (tools, hooks, submodules, gh account)
 pnpm plan:status   # where is each piece of work?
 pnpm check         # do the documents agree with the code?
 ```
@@ -18,8 +18,8 @@ pnpm check         # do the documents agree with the code?
 | "graphify … 0.9.80 or newer is required" | Older Graphify does not link documents to code | `uv tool upgrade graphifyy` (the package has two y's) |
 | `graphify: command not found` | uv's tool directory is not on `PATH` | `uv tool update-shell`, then open a new terminal |
 | "git 2.36 or newer is required" | The hook self-test uses `git hook run` | Upgrade git |
-| `pnpm doctor`: "Superpowers … no longer contains …" | A Superpowers release changed a step the hub's rules name | Read that skill, adjust the hub rule that depends on it (`docs/WORKFLOW.md`, "Tested with"), then update the text in `tools/lib/compat.mjs` |
-| `pnpm doctor` shows ✖ for a repository's hooks | Hooks were never installed in this clone, or something replaced them | `pnpm hub:setup`. For a repository using lefthook, run its `npm install` / `pnpm install` first so the lefthook binary exists |
+| `pnpm hub:doctor`: "Superpowers … no longer contains …" | A Superpowers release changed a step the hub's rules name | Read that skill, adjust the hub rule that depends on it (`docs/WORKFLOW.md`, "Tested with"), then update the text in `tools/lib/compat.mjs` |
+| `pnpm hub:doctor` shows ✖ for a repository's hooks | Hooks were never installed in this clone, or something replaced them | `pnpm hub:setup`. For a repository using lefthook, run its `npm install` / `pnpm install` first so the lefthook binary exists |
 | A hook you already had stopped running | `hub:setup` keeps it as `<hook>.local` and runs it first; if it is gone, it was never executable | `chmod +x .git/hooks/<hook>.local` in that repository (the hooks folder is printed by `git rev-parse --git-path hooks`) |
 | `pnpm check` (or a hub commit) fails on files you never meant to commit, such as personal notes | The check reads every Markdown file git does not ignore, committed or not | Move them out of the hub, or list their folder in `.git/info/exclude` (local to your clone, never committed) |
 
@@ -97,7 +97,7 @@ The hub records, for each product repository, the commit its documents describe.
 | Symptom | Why | Fix |
 |---|---|---|
 | "gh is not logged in" | GitHub mode refuses to half-run | `gh auth login` |
-| Commands act as the wrong GitHub account | `gh` can hold several accounts; only one is active | `pnpm doctor` shows the active one; `gh auth switch --user <account>` |
+| Commands act as the wrong GitHub account | `gh` can hold several accounts; only one is active | `pnpm hub:doctor` shows the active one; `gh auth switch --user <account>` |
 | "could not add label … not found" | Labels were never created, or a repository/epic is new | `pnpm gh:setup` (creates or updates, never deletes) |
 | A `--create` failed halfway | The PR may exist without its issue comment | Rerun the same command: it reuses the open PR and skips comments already posted |
 | `gh issue list` misses an issue you just created | GitHub's search index lags a few seconds | Use the number from the creation output, or wait and retry |

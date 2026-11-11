@@ -20,11 +20,11 @@ Then clone the hub with its product repositories and set it up:
 git clone --recurse-submodules <hub-url> hub
 cd hub
 pnpm hub:setup
-pnpm doctor
+pnpm hub:doctor
 graphify update .
 ```
 
-`pnpm hub:setup` checks the versions above, checks out every product repository and installs git hooks. Nothing it installs is committed anywhere. `pnpm doctor` proves it worked; rerun it whenever something feels off.
+`pnpm hub:setup` checks the versions above, checks out every product repository and installs git hooks. Nothing it installs is committed anywhere. `pnpm hub:doctor` proves it worked; rerun it whenever something feels off.
 
 ## 2. Read three documents (15 minutes)
 

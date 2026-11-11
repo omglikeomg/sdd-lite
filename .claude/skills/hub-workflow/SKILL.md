@@ -38,7 +38,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | Stop planned work nobody will finish | `pnpm plan:abandon <id> --reason "<your partner's reason>"` | Only on your human partner's decision; refuses if code already merged |
 | Write or change a pattern | Copy `docs/templates/PATTERN.md` to `docs/patterns/<slug>.md` on a hub branch `docs/pattern-<slug>`; cite it from the maps whose new code must follow it | A person approves the rules in the hub PR |
 | Review someone else's pull request | `review-pull-request` skill (it runs `pnpm review:start <repo> <pr>`) | Draft only; your human partner posts. Then `pnpm review:cleanup <repo> <pr>` |
-| Something seems misconfigured | `pnpm doctor` | Each ✖ names its fix |
+| Something seems misconfigured | `pnpm hub:doctor` | Each ✖ names its fix |
 
 ## Rules
 

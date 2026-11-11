@@ -62,7 +62,7 @@ Requirements: Node 20+, pnpm, git 2.36+, [Graphify](https://github.com/Graphify-
 
    ```bash
    git clone git@github.com:<you>/<your-hub>.git && cd <your-hub>
-   pnpm hub:setup && pnpm doctor
+   pnpm hub:setup && pnpm hub:doctor
    ```
 
 2. **Onboard each product repository** by asking your agent, for example "onboard our API: git@github.com:acme/api.git, it's NestJS with CQRS handlers". Its `onboard-repository` skill runs `pnpm repo:add` (which builds the knowledge graph), drafts the repository's architecture map and any contracts, and opens a hub PR for you to review. Presets for `pnpm repo:add`: `nest`, `next`, `sst`, `cqrs`.
@@ -76,7 +76,7 @@ Requirements: Node 20+, pnpm, git 2.36+, [Graphify](https://github.com/Graphify-
 uv tool install graphifyy             # or: uv tool upgrade graphifyy  (needs 0.9.80 or newer)
 git clone --recurse-submodules <hub-url> hub && cd hub
 pnpm hub:setup                        # checks tools, checks out repos/, installs hooks
-pnpm doctor                           # every line should be ✔
+pnpm hub:doctor                       # every line should be ✔
 graphify update .                     # builds the knowledge graph (no LLM, seconds)
 pnpm check                            # [check] ok
 ```

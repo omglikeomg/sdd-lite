@@ -45,7 +45,7 @@ Lucía clones the hub and sets it up (`docs/ONBOARDING.md` has the details):
 
 ```bash
 git clone --recurse-submodules git@github.com:acme/notes-hub.git && cd notes-hub
-pnpm hub:setup && pnpm doctor
+pnpm hub:setup && pnpm hub:doctor
 ```
 
 The repositories were onboarded by asking the agent:
