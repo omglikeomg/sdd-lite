@@ -144,6 +144,6 @@ The commands write every PR the hub opens, so they read the same everywhere:
 | "could not add label: '…' not found" | The labels were never created, or the repository or epic is new | `pnpm gh:setup` (labels are created or updated) |
 | "cannot tell the GitHub repository of …" | Its remote URL is not a GitHub URL the hub can read | Set `"github": "owner/name"` for that repository in `hub.config.json` |
 | A PR was opened but the issue got no comment | The command stopped on an error after opening the PR | Rerun the same `--create`: it reuses the open PR and posts only the comments that are missing (each carries a hidden marker) |
-| Commands act as the wrong account | `gh` can be logged into several accounts | `pnpm doctor` shows the active one; `gh auth switch --user <account>` |
+| Commands act as the wrong account | `gh` can be logged into several accounts | `pnpm hub:doctor` shows the active one; `gh auth switch --user <account>` |
 
 More situations and their fixes: `docs/TROUBLESHOOTING.md`.

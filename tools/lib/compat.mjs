@@ -1,5 +1,5 @@
 // What the hub relies on in Graphify and Superpowers, and the versions it was last verified with.
-// `pnpm doctor` compares versions and checks the Superpowers texts; tools/test/compat.test.mjs
+// `pnpm hub:doctor` compares versions and checks the Superpowers texts; tools/test/compat.test.mjs
 // also runs the real Graphify. docs/WORKFLOW.md ("Tested with") is the human-readable copy.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

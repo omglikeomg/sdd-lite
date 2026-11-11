@@ -27,7 +27,7 @@
     "review:start": "node tools/review.mjs start",
     "review:cleanup": "node tools/review.mjs cleanup",
     "gh:setup": "node tools/gh-setup.mjs",
-    "doctor": "node tools/doctor.mjs",
+    "hub:doctor": "node tools/doctor.mjs",
     "test": "node --test tools/test/*.test.mjs"
   }
 }
