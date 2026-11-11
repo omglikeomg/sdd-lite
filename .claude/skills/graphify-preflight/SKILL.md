@@ -39,6 +39,7 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 **Existing code to reuse or extend**
 - `repos/api/src/billing/billing.service.ts::BillingService` issues invoices; extend it instead of a new service.
 
+<!-- Only when the repository's map cites patterns; otherwise leave the heading out. -->
 **Patterns to follow**
 - `docs/patterns/idempotent-message-handlers.md`: the new consumer records its key in the same transaction as the invoice.
 
