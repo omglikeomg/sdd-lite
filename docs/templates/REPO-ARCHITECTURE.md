@@ -47,6 +47,8 @@ flowchart LR
 
 ## Patterns
 
+<!-- Omit this section when the repository follows no pattern. -->
+
 New code follows [Idempotent message handlers](../../patterns/idempotent-message-handlers.md) in every consumer, and [REST controllers](../../patterns/rest-controllers.md) in every HTTP module.
 
 Known deviations, to bring in line when the code is next changed substantially:
