@@ -14,6 +14,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { explanationSections, fixPrBody, featurePrBody, oneWaySigns } from '../lib/pr-text.mjs';
+import { glossaryProblems } from '../lib/glossary.mjs';
 
 test('plan branches carry type, six-digit ID and slug', () => {
   assert.deepEqual(parsePlanBranch('feat/000042-checkout-payments'), { type: 'feat', id: '000042', slug: 'checkout-payments' });
@@ -331,4 +332,50 @@ test('specs can retire criteria; retired criteria are not definitions', () => {
   const defs = loadAcDefinitions(root);
   assert.ok(defs.has('PAY-5'));
   assert.ok(!defs.has('PAY-2'), 'a test still citing a retired criterion fails pnpm check');
+});
+
+const GLOSSARY = `# Glossary
+
+What the hub's words mean.
+
+\`\`\`markdown
+### Not a term
+\`\`\`
+
+## Hub
+
+The hub's own vocabulary.
+
+### Ruling
+A decision the executing agent makes where the plan is wrong. It is recorded as a \`Ruling:\` footer.
+_Avoid_: deviation, override.
+
+### Door
+
+Whether reverting the squash undoes a change.
+`;
+
+test('glossary: a well-formed glossary has no problems', () => {
+  assert.deepEqual(glossaryProblems(GLOSSARY), []);
+});
+
+test('glossary: each broken rule is reported once, at its line', () => {
+  const cases = [
+    ['a term outside a context', (t) => t.replace('## Hub\n', '### Orphan\nA stray term.\n\n## Hub\n'), /not under a "## " context/],
+    ['a heading deeper than a term', (t) => `${t}\n#### Detail\n`, /deeper than ###/],
+    ['a term with no definition', (t) => `${t}\n### Frontier\n`, /"Frontier" has no definition/],
+    ['three sentences', (t) => t.replace('a `Ruling:` footer.', 'a `Ruling:` footer. It is kept.'), /3 sentences; the limit is two/],
+    ['a list under a term', (t) => t.replace('_Avoid_: deviation', '- a list item\n_Avoid_: deviation'), /"Ruling": only one definition paragraph/],
+    ['a second paragraph', (t) => t.replace('undoes a change.\n', 'undoes a change.\n\nMore prose.\n'), /"Door": only one definition paragraph/],
+    ['a duplicate term', (t) => `${t}\n### ruling\nAgain.\n`, /"ruling" is defined twice/],
+    ['an avoided word that is a term', (t) => t.replace('override.', 'door.'), /"door" is listed under _Avoid_ but is a term/],
+    ['an email address', (t) => t.replace('What the hub', 'Ask someone@example.com what the hub'), /email address/],
+    ['an @-mention', (t) => t.replace('What the hub', 'Ask @someone what the hub'), /@-mention/],
+  ];
+  for (const [name, mutate, message] of cases) {
+    const problems = glossaryProblems(mutate(GLOSSARY));
+    assert.equal(problems.length, 1, `${name}: ${JSON.stringify(problems)}`);
+    assert.match(problems[0].message, message, name);
+    assert.ok(problems[0].line >= 1, name);
+  }
 });
