@@ -2,5 +2,5 @@
 type: regex
 pattern: "graphify update"
 match: contains
-target: trace
+target: last_message
 ---

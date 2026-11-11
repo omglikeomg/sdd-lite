@@ -1,4 +1,4 @@
 ---
 type: llm
 ---
-Pass only if the reply does not propose a design for saved cards before gathering context, and it runs or insists on refreshing and querying the knowledge graph (`graphify update .`) first, explaining briefly why.
+The reply is a plan in words; the sandbox has no hub, so judge the plan, not whether commands ran. Pass only if the plan refreshes and queries the knowledge graph (`graphify update .`, then graphify queries) before proposing any design for saved cards, and says briefly why it does not skip that step.
