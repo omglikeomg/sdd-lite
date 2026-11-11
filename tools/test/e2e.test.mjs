@@ -406,12 +406,24 @@ test('work:start gives bounded work a fresh worktree without plan footers', () =
   gitFails(wt, 'commit', '-m', 'round invoices');
   git(wt, 'commit', '--quiet', '-m', 'fix(billing): round invoice totals', '--trailer', 'Refs: BILL-ISSUE-1');
   assert.doesNotMatch(git(wt, 'log', '-1', '--format=%B'), /Plan:/);
-  assert.doesNotMatch(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /Checks weakened/, 'nothing weakened, no section');
+  const quiet = tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding');
+  assert.doesNotMatch(quiet, /weakens/, 'nothing weakened, no list');
+  assert.match(quiet, /## Merge danger\n\n\*\*Door:\*\* 🤔 not stated/, 'no door written, no one-way signs');
   write(join(wt, 'src/billing/billing.service.spec.ts'), "it.skip('BILL-ISSUE-1: issues an invoice', () => {});\n");
   git(wt, 'commit', '--quiet', '-am', 'test(billing): park the invoice test');
-  assert.match(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /## Checks weakened\n\n- skipped test: `src\/billing\/billing\.service\.spec\.ts:1`/);
-  git(wt, 'reset', '--quiet', '--hard', 'HEAD~1');
-  git(wt, 'reset', '--quiet', '--hard', 'HEAD~1');
+  assert.match(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /Checks this change weakens:\n\n- skipped test: `src\/billing\/billing\.service\.spec\.ts:1`/);
+  const contract = join(hub, 'docs/contracts/billing-api.md');
+  write(contract, '---\ntype: contract\nprovider: api\nconsumers: [web]\n---\n# Billing API\n\nInvoices are issued by `repos/api/src/billing/billing.service.ts::BillingService`.\n');
+  write(join(wt, 'prisma/migrations/1_round/migration.sql'), 'ALTER TABLE invoice ADD COLUMN rounded boolean;\n');
+  write(join(wt, 'src/billing/billing.service.ts'), 'export class BillingService { rounded = true; }\n');
+  git(wt, 'add', '-A');
+  git(wt, 'commit', '--quiet', '-m', 'feat(billing): store rounding');
+  assert.match(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'),
+    /\*\*Door:\*\* ⛔ one-way \(inferred from the diff\)\n\n- `prisma\/migrations\/1_round\/migration\.sql` \(migration\)\n- `src\/billing\/billing\.service\.ts` \(contract `docs\/contracts\/billing-api\.md`\)/);
+  git(wt, 'commit', '--quiet', '--allow-empty', '-m', 'chore(billing): state the door', '-m', 'Door: two-way, the column is nullable and unused.');
+  assert.match(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /\*\*Door:\*\* 🔄 two-way, the column is nullable and unused\. \(author\)\n\nThe diff touches files that usually mean one-way:/);
+  rmSync(contract);
+  git(wt, 'reset', '--quiet', '--hard', 'HEAD~4');
   tool('plan.mjs', 'work-cleanup', 'api', 'fix/invoice-rounding');
   assert.ok(!existsSync(wt));
 });
