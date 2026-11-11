@@ -73,11 +73,13 @@ Errors: provider declines map to HTTP 402 with the provider's reason; provider o
 <!-- hub, required once approved: the living documents this work will change, one checkbox each,
      reviewed with the design in the spec PR. They are updated in the completion PR, when they
      describe main; tick each item then. `pnpm check` refuses a done spec with an unticked item.
+     List `docs/GLOSSARY.md` when the work adds or changes a term, with the agreed definition.
      Write "- None: <why>" when nothing changes. -->
 
 - [ ] `docs/codebases/api/ARCHITECTURE.md`: add the saved-card charge path to the payments module row
 - [ ] `docs/contracts/catalog-graphql.md`: add `customer.paymentMethods`
 - [ ] `docs/features/checkout-payments.md`: CHECKOUT-PAY-6 to 8 (moved by `pnpm plan:complete`)
+- [ ] `docs/GLOSSARY.md`: add **Saved card** (Checkout): a payment method a customer stored for later orders
 
 ## Manual steps
 

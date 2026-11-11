@@ -13,13 +13,14 @@ import {
 import { parsePlan, blockedByError } from './lib/plans.mjs';
 import { matchesAny, globToRegExp } from './lib/glob.mjs';
 import { gitTry, lsFiles } from './lib/git.mjs';
+import { glossaryProblems } from './lib/glossary.mjs';
 
 const SKIP_ANYWHERE = new Set(['.git', 'node_modules']);
 const SKIP_TOP = new Set(['repos', '.worktrees', '.reviews', 'graphify-out', '.superpowers']);
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
   rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) || rel.startsWith(`${DIRS.patterns}/`) ||
-  ['docs/ARCHITECTURE.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
+  ['docs/ARCHITECTURE.md', 'docs/GLOSSARY.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
 
 export function allMarkdown(root) {
   const out = [];
@@ -67,6 +68,7 @@ export function runChecks(root = HUB_ROOT) {
   checkContracts(root, cfg, files, texts, err);
   checkPatterns(files, texts, err);
   checkEpics(root, files, texts, err);
+  checkGlossary(texts, err);
   return errors;
 }
 
@@ -512,6 +514,14 @@ function checkEpics(root, files, texts, err) {
     const defined = new Set(existsSync(prd) ? [...readFileSync(prd, 'utf8').matchAll(REQ_DEFINITION_RE)].map((m) => m[1]) : []);
     for (const r of new Set(stripCode(text).match(REQ_REF_RE) || [])) if (!defined.has(r)) err(rel, 1, 'epics', `${r} is not defined in the epic's prd.md`);
   }
+}
+
+// ── glossary ────────────────────────────────────────────────────────────────
+
+function checkGlossary(texts, err) {
+  const rel = 'docs/GLOSSARY.md';
+  if (!texts.has(rel)) return;
+  for (const p of glossaryProblems(texts.get(rel))) err(rel, p.line, 'glossary', p.message);
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────

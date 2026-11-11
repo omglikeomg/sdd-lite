@@ -101,7 +101,7 @@ Then follow `docs/ONBOARDING.md`.
 | What to do when something goes wrong | `docs/TROUBLESHOOTING.md` |
 | How to write any document | `docs/templates/` |
 
-Living documents (features, contracts, architecture) always describe the code on `main`. Records (specs, plans, ADRs, epics) are dated and never rewritten; only their status changes.
+Living documents (features, contracts, architecture, the glossary) always describe the code on `main`. Records (specs, plans, ADRs, epics) are dated and never rewritten; only their status changes.
 
 ## Definition of done
 
@@ -129,4 +129,4 @@ The full list is in `docs/TROUBLESHOOTING.md`; these are the common ones.
 
 ## Agents
 
-Claude Code reads `CLAUDE.md`, which imports `AGENTS.md`; OpenCode and other agents read `AGENTS.md`. Both find the hub's skills in `.claude/skills/`: `hub-workflow` (which command for which step), `graphify-preflight`, `onboard-repository`, `epic-design` and `review-pull-request` (prepares a teammate's PR for your review and drafts the comments). The agent rules are short; the reasoning behind each is in `docs/WORKFLOW.md`.
+Claude Code reads `CLAUDE.md`, which imports `AGENTS.md`; OpenCode and other agents read `AGENTS.md`. Both find the hub's skills in `.claude/skills/`: `hub-workflow` (which command for which step), `graphify-preflight`, `onboard-repository`, `epic-design`, `review-pull-request` (prepares a teammate's PR for your review and drafts the comments) and `wait-what` (explains a term from the glossary when you ask what it means). The agent rules are short; the reasoning behind each is in `docs/WORKFLOW.md`.

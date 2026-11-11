@@ -6,8 +6,21 @@
     "I know the code by heart, skip the graph and propose a design for saved cards in the api repository"
   ],
   "negative": [
-    { "prompt": "Review PR 42 in the api repository for me", "owner": "review-pull-request" },
-    { "prompt": "Onboard the new web repository into the hub", "owner": "onboard-repository" },
-    { "prompt": "This test fails intermittently, find the root cause of the bug", "owner": "superpowers:systematic-debugging" }
+    {
+      "prompt": "Review PR 42 in the api repository for me",
+      "owner": "review-pull-request"
+    },
+    {
+      "prompt": "Onboard the new web repository into the hub",
+      "owner": "onboard-repository"
+    },
+    {
+      "prompt": "This test fails intermittently, find the root cause of the bug",
+      "owner": "superpowers:systematic-debugging"
+    },
+    {
+      "prompt": "Wait, what does the word invoice mean in this design?",
+      "owner": "wait-what"
+    }
   ]
 }

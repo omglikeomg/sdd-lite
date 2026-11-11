@@ -36,7 +36,7 @@ This repository is the hub: specs, decisions and plans for the product repositor
 ## Completing
 
 20. Do not tick plan checkboxes by hand; `pnpm plan:complete` does it from git history, moves the acceptance criteria and records the rulings.
-21. Living documents (`docs/features/`, `docs/codebases/`, `docs/contracts/`, `docs/ARCHITECTURE.md`) describe the code on `main`. Update them in the completion PR, not before: apply every item of the spec's Documentation impact and tick it. For bounded work, the hub PR that updates them also moves the repository's submodule pointer to the merged code with `pnpm repo:sync <repo>`.
+21. Living documents (`docs/features/`, `docs/codebases/`, `docs/contracts/`, `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`) describe the code on `main`. Update them in the completion PR, not before: apply every item of the spec's Documentation impact and tick it. For bounded work, the hub PR that updates them also moves the repository's submodule pointer to the merged code with `pnpm repo:sync <repo>`.
 22. Point at code with backticked hub-relative paths with a symbol, such as `` `repos/api/src/billing/billing.module.ts::BillingModule` ``: only the symbol form becomes a graph edge. Link documents with relative Markdown links.
 23. `pnpm plan:revert` only prints commands; never run its output without your human partner's go-ahead. Run `pnpm plan:abandon` only when your human partner decides the work stops, and pass their reason.
 

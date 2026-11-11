@@ -357,6 +357,7 @@ test('every check rule fails when its rule is broken', () => {
   const extras = [
     ['location', 'docs/notes/meeting.md', '# Notes\n'],
     ['ids', 'docs/superpowers/specs/000001-other-thing-design.md', '---\ntype: design\nstatus: draft\n---\n# Other\n'],
+    ['glossary', 'docs/GLOSSARY.md', '# Glossary\n\n### Orphan\nA term outside any context.\n'],
     ['architecture', 'docs/codebases/api/architecture/refunds.md', '---\ntype: architecture-area\npaths:\n  - repos/api/src/refunds/**\n---\n# api: refunds\n'],
   ];
   for (const [rule, rel, text] of extras) {
