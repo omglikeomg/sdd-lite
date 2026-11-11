@@ -39,6 +39,7 @@ flowchart LR
 | `tools/git-hooks/run.mjs` | The single entry point every installed git hook calls |
 | `tools/lib/` | Conventions, Markdown, git, hook and acceptance-criteria helpers shared by the tools; `compat.mjs` records what the hub relies on in Graphify and Superpowers |
 | `tools/test/` | Unit tests, an end-to-end test of the full planned-work cycle, compatibility tests against the installed Graphify and Superpowers, and the deterministic checks of the hub's skills |
+| `tools/lib/glossary.mjs` | The format of `docs/GLOSSARY.md`, checked by the `glossary` rule |
 | `tools/lib/skills.mjs` | The skill checks: structure, trigger ranking and description collisions |
 | `tools/evals/` | Trigger prompts per skill (`triggers/`) and behavioural cases for `claude plugin eval` (`cases/`) |
 | `tools/skill-eval.mjs` | `skills:eval`: runs the behavioural cases on demand in a temporary plugin of the hub's skills |
@@ -75,3 +76,4 @@ Accepted decisions in the order they were made. `pnpm check` fails if an accepte
 1. [ADR-0001: The hub holds all specs; product repositories are submodules](adr/0001-hub-with-submodules-holds-all-specs.md)
 2. [ADR-0002: Six-digit work IDs in branches and Conventional Commit footers](adr/0002-work-ids-branches-and-conventional-commits.md)
 3. [ADR-0003: The knowledge graph is derived and never committed](adr/0003-knowledge-graph-is-derived-and-uncommitted.md)
+4. [ADR-0004: One living glossary for the whole system](adr/0004-one-living-glossary.md)

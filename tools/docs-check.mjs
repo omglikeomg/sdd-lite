@@ -20,7 +20,7 @@ const SKIP_TOP = new Set(['repos', '.worktrees', '.reviews', 'graphify-out', '.s
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
   rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) || rel.startsWith(`${DIRS.patterns}/`) ||
-  ['docs/ARCHITECTURE.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
+  ['docs/ARCHITECTURE.md', 'docs/GLOSSARY.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
 
 export function allMarkdown(root) {
   const out = [];

@@ -101,7 +101,7 @@ Then follow `docs/ONBOARDING.md`.
 | What to do when something goes wrong | `docs/TROUBLESHOOTING.md` |
 | How to write any document | `docs/templates/` |
 
-Living documents (features, contracts, architecture) always describe the code on `main`. Records (specs, plans, ADRs, epics) are dated and never rewritten; only their status changes.
+Living documents (features, contracts, architecture, the glossary) always describe the code on `main`. Records (specs, plans, ADRs, epics) are dated and never rewritten; only their status changes.
 
 ## Definition of done
 

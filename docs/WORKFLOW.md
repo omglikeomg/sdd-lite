@@ -27,6 +27,7 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
 | `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
 | `docs/patterns/` | How the team builds one kind of thing (a consumer, a controller, a frontend feature), as rules with their reasons | living |
+| `docs/GLOSSARY.md` | The system's vocabulary: one meaning per term, grouped by context | living |
 | `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `docs/PR_REVIEW.md`, `README.md` | How to join, how to work and how to review | living |
 | `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
@@ -374,6 +375,28 @@ Patterns are optional; the kit ships none. Repository maps connect them to code:
 
 Adding or changing a pattern is a hub PR a person approves. It needs an ADR only when it reverses a direction existing code relies on.
 
+## Glossary
+
+`docs/GLOSSARY.md` gives each word the system uses one meaning ([ADR-0004](adr/0004-one-living-glossary.md)). Each context is a `##` section (`## Hub` today; a product domain gets its own when its repository brings terms), and each term a `###` heading under it:
+
+```markdown
+### Ruling
+A decision the executing agent makes where the plan is wrong or silent, or a review finding it parks. It is recorded as a `Ruling: …` commit footer.
+_Avoid_: deviation, override
+```
+
+- **One definition paragraph, at most two sentences**, saying what the term is in this system, then optionally one `_Avoid_:` line with the words not to use for it. Nothing else goes under a term: no lists, code or implementation detail. Sentences are counted by their final `.`, `!` or `?`, so abbreviations such as "e.g." count as one; write "such as" instead.
+- **Only this system's concepts.** General programming terms stay out, even when the code uses them everywhere.
+- **No personal data.** `pnpm check` rejects email addresses and @-mentions; reviewers catch names.
+
+It is a living document, so it changes when `main` does:
+
+- A design that introduces or changes a term lists `docs/GLOSSARY.md` in its Documentation impact, and the completion PR writes the entry; until then the spec (or the epic's README) carries the agreed definition.
+- Bounded work updates it in the hub PR that documents the merged code.
+- A term for code already on `main` that the glossary lacks can be added in a small hub PR.
+
+The `graphify-preflight` skill reads it and lists the relevant terms in the Context block; words a request uses that are missing or used differently become open questions for the design. `epic-design` challenges the PRD's words the same way, and the `wait-what` skill explains a term on request and proposes a missing entry. Headings are graph nodes, so `graphify query` finds terms and documents can link `GLOSSARY.md#<term>`.
+
 ## Architecture documents
 
 - `docs/ARCHITECTURE.md` is the system map. Its `## Evolution` section links every accepted ADR in order; together with git history it is the record of how the architecture changed.
@@ -414,6 +437,7 @@ Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, 
 | `patterns` | Each pattern has a `## Rules` section with at least one rule |
 | `contracts` | Contracts name a configured provider and consumers, cite code in each, and are linked from `docs/ARCHITECTURE.md` |
 | `epics` | Each epic has `prd.md`; every `REQ-n` is in the requirement map and exists; a done epic links only done or abandoned specs; specs cite only requirements their epic defines |
+| `glossary` | In `docs/GLOSSARY.md`, every `###` term sits under a `##` context and holds one definition paragraph of at most two sentences plus an optional `_Avoid_:` line; no term is defined twice or listed under another term's `_Avoid_`; no email addresses or @-mentions |
 
 Templates in `docs/templates/` are exempt. The check reads the working tree, including documents not yet committed, but skips files git ignores: to keep personal notes inside the hub without failing the check (and the commit hook that runs it), list their folder in your own `.git/info/exclude`.
 
