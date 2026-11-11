@@ -372,10 +372,12 @@ test('every check rule fails when its rule is broken', () => {
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
   // A skipped test does not prove its criterion.
   const spec = join(api, 'src/payments/payments.service.spec.ts');
-  const proven = readFileSync(spec, 'utf8');
-  writeFileSync(spec, proven.replace("it('CHECKOUT-PAY-1:", "it.skip('CHECKOUT-PAY-1:"));
+  writeFileSync(spec, readFileSync(spec, 'utf8').replace("it('CHECKOUT-PAY-1:", "it.skip('CHECKOUT-PAY-1:"));
   assert.match(check(), /\[ac\].*CHECKOUT-PAY-1 is cited only by skipped tests/);
-  writeFileSync(spec, proven);
+  // Restore through git: rewriting the same bytes leaves a stale index entry that blocks later
+  // submodule updates.
+  git(api, 'checkout', '--', 'src/payments/payments.service.spec.ts');
+  assert.equal(git(api, 'diff-files', '--name-only').trim(), '', 'the index of repos/api is clean again');
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'the same test, not skipped, proves it');
 });
 
