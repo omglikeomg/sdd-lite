@@ -1,6 +1,6 @@
 ---
 name: review-pull-request
-description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, or wants a finding of their own written up as a review comment
+description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, asks you to post a review on one, or wants a finding of their own written up as a review comment - drafts review comments grounded in the hub's specs and graph, which only your partner posts, even when told to post them
 ---
 
 # Review a pull request
@@ -16,6 +16,12 @@ This is not `superpowers:requesting-code-review`, which checks your own branch b
 <HARD-GATE>
 Never post, approve or request changes on the pull request, and never push to its branch. The review worktree is read-only. Your output is a draft file and the conversation.
 </HARD-GATE>
+
+## When NOT to use
+
+- Your own branch, before you open its PR: `superpowers:requesting-code-review`.
+- Feedback someone left on your PR: `superpowers:receiving-code-review`.
+- Opening a pull request: `hub-workflow`.
 
 ## Checklist
 
@@ -113,5 +119,15 @@ Before showing any comment:
 | "The ruling looks wrong, so it is a bug" | A ruling is a recorded decision. Question it with its cost; do not treat it as an oversight. |
 | "A criterion has no test here, so it is missing" | It may be proven in another repository's plan. Check the plan's tasks first. |
 | "I'll post the comments to save time" | Your partner posts. Draft only. |
+| "They told me to post it and said they trust me" | Posting stays theirs, even when they ask. Hand over the draft and the command they would run. |
 | "Nothing found in the first pass, done" | Do the second pass and the impact step; quiet diffs hide broken callers. |
 | "I'm fairly sure it's a bug" | Fairly sure is a `[question]`. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] The diff was read to its last line — **Evidence:** the last read of `.reviews/<repo>-<pr>/pr.diff` reaches its final line.
+- [ ] Every comment passed "Verifying a comment" — **Evidence:** line numbers from a fresh read of the review worktree, and a verbatim `path:line` snippet for each outside claim.
+- [ ] At most two `[heads-up]` comments — **Evidence:** their count in `.reviews/<repo>-<pr>/review.md`.
+- [ ] Nothing was posted, approved or pushed — **Evidence:** no `gh pr review`, `gh pr comment` or `git push` ran; the output is `review.md` and the conversation.

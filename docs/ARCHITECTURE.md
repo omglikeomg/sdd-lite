@@ -38,7 +38,10 @@ flowchart LR
 | `tools/setup.mjs` | `hub:setup`: prerequisites, submodules, hook installation |
 | `tools/git-hooks/run.mjs` | The single entry point every installed git hook calls |
 | `tools/lib/` | Conventions, Markdown, git, hook and acceptance-criteria helpers shared by the tools; `compat.mjs` records what the hub relies on in Graphify and Superpowers |
-| `tools/test/` | Unit tests, an end-to-end test of the full planned-work cycle, and compatibility tests against the installed Graphify and Superpowers |
+| `tools/test/` | Unit tests, an end-to-end test of the full planned-work cycle, compatibility tests against the installed Graphify and Superpowers, and the deterministic checks of the hub's skills |
+| `tools/lib/skills.mjs` | The skill checks: structure, trigger ranking and description collisions |
+| `tools/evals/` | Trigger prompts per skill (`triggers/`) and behavioural cases for `claude plugin eval` (`cases/`) |
+| `tools/skill-eval.mjs` | `skills:eval`: runs the behavioural cases on demand in a temporary plugin of the hub's skills |
 | `hub.config.json` | Product repositories: path, default branch, test globs, structural files to document |
 | `.claude/skills/graphify-preflight/SKILL.md` | The context-gathering step every design starts with |
 | `.claude/skills/hub-workflow/SKILL.md` | Maps each stage of the work to the command that performs it |

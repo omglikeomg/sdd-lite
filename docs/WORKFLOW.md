@@ -454,7 +454,8 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | `pnpm review:start <repo> <pr>` | Checks out a pull request's head in a review worktree and writes its review context to `.reviews/<repo>-<pr>/` (see "Reviewing pull requests") |
 | `pnpm review:cleanup <repo> <pr>` | Removes the review worktree; keeps the notes in `.reviews/` |
 | `pnpm check` | Runs every rule above |
-| `pnpm test` | Tests for the tools themselves |
+| `pnpm test` | Tests for the tools themselves, and the deterministic checks of the hub's skills (see "Testing the hub's skills") |
+| `pnpm skills:eval [options]` | Behavioural evals of the hub's skills through `claude plugin eval`; on demand only, since every run is a model call (see "Testing the hub's skills") |
 
 Set `HUB_SKIP_GRAPHIFY=1` to skip Graphify where it is not installed (the tools' own tests do this).
 
@@ -474,6 +475,20 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. It loads `CLAUDE.md` files from parent directories, so sessions started in `.worktrees/…` still get the hub's rules.
 - **OpenCode** reads `AGENTS.md` and finds the preflight skill in `.claude/skills/`. It does not look for skills above a git worktree, so execution sessions rely on the plan's `## Execution rules`, which the executing agent reads (implementer subagents get their task's steps).
 - Install Superpowers in each harness you use; Graphify's own skill is optional.
+
+## Testing the hub's skills
+
+The hub's skills in `.claude/skills/` are checked in two tiers.
+
+`pnpm test` runs `tools/test/skills.test.mjs`, with no network and no model:
+
+- **Structure.** The frontmatter `name` matches the folder. The description starts with "Use when", says when to use the skill, and ends with one short ` - ` clause saying what the skill does without listing its steps. The skill has `## Overview`, `## When NOT to use`, `## Red flags` and `## Verification` sections, and every Verification item ends with `— **Evidence:** <what shows it>`. It stays under 500 lines.
+- **Triggers.** `tools/evals/triggers/<skill>.json` lists prompts that should fire the skill (`positive`, at least three) and similar prompts that should not (`negative`, at least two, each with the `owner` skill that should take it, such as `hub-workflow` or `superpowers:brainstorming`). The match is lexical: each description becomes a TF-IDF vector, and a prompt must rank its skill first, or rank its owner above the skill. A failure usually means the description lacks the words people use; fix the description, not the prompt.
+- **Collisions.** No two descriptions, among the hub's skills or against the installed Superpowers skills, may be too alike (the limit is in the test).
+
+Cases naming a Superpowers skill skip when Superpowers is not installed, as in CI. A new skill fails `pnpm test` until it has its trigger file; give it negatives owned by the skills it could be confused with.
+
+`pnpm skills:eval` copies the skills and `tools/evals/cases/` into a temporary plugin and runs `claude plugin eval` on it (Claude Code 2.1.269 or later), with and without the skills. Each case is a folder with a `prompt.md` and its `graders/`: pressure cases check that a skill holds when the prompt argues for skipping it, and precision cases check that a skill stays quiet where a lexical match cannot tell the difference (reviewing your own branch is not `review-pull-request`). Runs happen in an empty sandbox where tools are denied, so each prompt asks the agent to load any skill that applies (a real session's Superpowers hook does that) and describe its plan without running commands, and the graders judge that plan, not whether hub commands succeed. Pass options through, for example `pnpm skills:eval --case review-* --runs 1 --model haiku --max-cost-usd 0.50`; the report lands in `.skill-evals/<timestamp>/`. Skill invocation is stochastic: read the report, not only the exit code.
 
 ## Tested with
 

@@ -28,6 +28,7 @@
     "review:cleanup": "node tools/review.mjs cleanup",
     "gh:setup": "node tools/gh-setup.mjs",
     "hub:doctor": "node tools/doctor.mjs",
+    "skills:eval": "node tools/skill-eval.mjs",
     "test": "node --test tools/test/*.test.mjs"
   }
 }

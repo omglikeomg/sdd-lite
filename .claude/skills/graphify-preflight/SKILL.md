@@ -1,6 +1,6 @@
 ---
 name: graphify-preflight
-description: Use when starting brainstorming, design, specification, planning or a bug investigation in the hub, before proposing approaches or asking design questions - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
+description: Use when asked to propose or brainstorm a design, write a specification or plan, or start a bug investigation in the hub or its product repositories, before proposing approaches or asking design questions, even when someone says they know the code or asks to skip it - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
 ---
 
 # Graphify preflight
@@ -12,6 +12,12 @@ Design starts from the system that exists. This skill refreshes the knowledge gr
 **Announce at start:** "Using graphify-preflight to gather existing context before designing."
 
 It is how `superpowers:brainstorming` reads the project before its first message, and it runs every time. Scale it to the tier: one or two queries for Bounded work, the full checklist for Architectural work.
+
+## When NOT to use
+
+- Trivial work: it skips design; state the change in one line and start it (`hub-workflow`).
+- Reviewing someone else's pull request: `review-pull-request` refreshes the graph through `pnpm review:start` and maps the impact itself.
+- Onboarding a repository: `onboard-repository` reads the graph for the whole repository.
 
 ## Checklist
 
@@ -59,7 +65,17 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 | Thought | Reality |
 |---|---|
 | "I know this codebase, I can skip the graph" | The graph exists because memory is wrong. Run the checklist. |
+| "My partner said to skip the graph" | It always runs. Say why in one line, then run it at the size the tier needs. |
 | "The graph says X calls Y" (edge is INFERRED) | Open the file. Inferred edges are guesses until read. |
 | "Nothing similar exists" after one query | Ask a second question in different words and check the feature documents. |
 | "I'll query without refreshing, it was built recently" | Submodule commits do not refresh the hub's graph. Refresh. |
 | "The Context block can list files I have not opened" | Every path in it was read in this session, or it is not in the block. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] The graph was refreshed in this session — **Evidence:** the pasted `[graphify watch]` line.
+- [ ] Every path in the Context block was opened in this session — **Evidence:** a read of each path earlier in the conversation.
+- [ ] Every `INFERRED` or `AMBIGUOUS` edge you kept was confirmed in the code — **Evidence:** the file and line that confirms it, next to the claim.
+- [ ] The Context block is where the tier puts it — **Evidence:** the block in the conversation (Bounded) or the spec's `## Context` (Architectural).

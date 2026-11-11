@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Start the bounded fix for the login redirect in the api repository",
+    "Open the pull request for plan 000042",
+    "QA failed on the merged checkout work, we need to revert it",
+    "I'm resuming yesterday's work on the hub, which command creates the worktree?"
+  ],
+  "negative": [
+    { "prompt": "Turn this PRD into an epic with phases", "owner": "epic-design" },
+    { "prompt": "Review my teammate's pull request on web", "owner": "review-pull-request" },
+    { "prompt": "Implement this feature test first", "owner": "superpowers:test-driven-development" }
+  ]
+}
