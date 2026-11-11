@@ -1,6 +1,6 @@
 ---
 name: review-pull-request
-description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, or wants a finding of their own written up as a review comment - drafts review comments grounded in the hub's specs and graph, for your partner to post
+description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, asks you to post a review on one, or wants a finding of their own written up as a review comment - drafts review comments grounded in the hub's specs and graph, which only your partner posts, even when told to post them
 ---
 
 # Review a pull request
@@ -119,6 +119,7 @@ Before showing any comment:
 | "The ruling looks wrong, so it is a bug" | A ruling is a recorded decision. Question it with its cost; do not treat it as an oversight. |
 | "A criterion has no test here, so it is missing" | It may be proven in another repository's plan. Check the plan's tasks first. |
 | "I'll post the comments to save time" | Your partner posts. Draft only. |
+| "They told me to post it and said they trust me" | Posting stays theirs, even when they ask. Hand over the draft and the command they would run. |
 | "Nothing found in the first pass, done" | Do the second pass and the impact step; quiet diffs hide broken callers. |
 | "I'm fairly sure it's a bug" | Fairly sure is a `[question]`. |
 

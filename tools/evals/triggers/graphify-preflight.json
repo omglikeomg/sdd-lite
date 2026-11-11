@@ -2,7 +2,8 @@
   "positive": [
     "Before we design the refund flow, gather what already exists in the code and the ADRs",
     "What specs, ADRs and existing code does the knowledge graph have about invoices?",
-    "Start a bug investigation: what do we already know about the checkout timeout from the graph?"
+    "Start a bug investigation: what do we already know about the checkout timeout from the graph?",
+    "I know the code by heart, skip the graph and propose a design for saved cards in the api repository"
   ],
   "negative": [
     { "prompt": "Review PR 42 in the api repository for me", "owner": "review-pull-request" },

@@ -1,6 +1,6 @@
 ---
 name: graphify-preflight
-description: Use when starting brainstorming, design, specification, planning or a bug investigation in the hub, before proposing approaches or asking design questions - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
+description: Use when asked to propose or brainstorm a design, write a specification or plan, or start a bug investigation in the hub or its product repositories, before proposing approaches or asking design questions, even when someone says they know the code - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
 ---
 
 # Graphify preflight
@@ -65,6 +65,7 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 | Thought | Reality |
 |---|---|
 | "I know this codebase, I can skip the graph" | The graph exists because memory is wrong. Run the checklist. |
+| "My partner said to skip the graph" | It always runs. Say why in one line, then run it at the size the tier needs. |
 | "The graph says X calls Y" (edge is INFERRED) | Open the file. Inferred edges are guesses until read. |
 | "Nothing similar exists" after one query | Ask a second question in different words and check the feature documents. |
 | "I'll query without refreshing, it was built recently" | Submodule commits do not refresh the hub's graph. Refresh. |
