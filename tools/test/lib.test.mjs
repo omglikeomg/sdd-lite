@@ -7,7 +7,7 @@ import {
 import { weakenedChecks } from '../lib/floor.mjs';
 import { splitFrontmatter, setFrontmatterValue, stripCode, codeSpans, links, section } from '../lib/markdown.mjs';
 import { globToRegExp, matchesAny } from '../lib/glob.mjs';
-import { parsePlan, tickTasks, rulingsFromLedger } from '../lib/plans.mjs';
+import { parsePlan, tickTasks, rulingsFromLedger, blockedByError } from '../lib/plans.mjs';
 import { criteriaBlocks, criteriaByFeature, mergeCriteria, newFeatureDoc, splitCriteria, removeCriteria } from '../lib/features.mjs';
 import { loadAcDefinitions } from '../lib/hub.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -234,6 +234,30 @@ const PLAN = `# Checkout Implementation Plan
 
 - [ ] not a task checkbox
 `;
+
+test('plans: Blocked by lines are read per task and survive ticking', () => {
+  const plan = PLAN
+    .replace('### Task 1: Charge endpoint\n', '### Task 1: Charge endpoint\n\n**Blocked by:** None\n')
+    .replace('### Task 2: Receipt\n', '### Task 2: Receipt\n\n**Blocked by:** Task 1\n');
+  const p = parsePlan(plan);
+  assert.deepEqual(p.tasks.map((t) => t.blockedBy && t.blockedBy.value), ['None', 'Task 1']);
+  assert.deepEqual(p.tasks.map((t) => t.checkboxes.length), [2, 1], 'the line is not a step');
+  const ticked = tickTasks(plan, new Set([1, 2]));
+  assert.match(ticked, /### Task 2: Receipt\n\n\*\*Blocked by:\*\* Task 1\n/, 'ticking leaves the line as written');
+  assert.ok(parsePlan(ticked).tasks.every((t) => t.checkboxes.every((c) => c.checked)));
+});
+
+test('plans: a task waits only for earlier tasks of its plan', () => {
+  const task = (number, value) => ({ number, line: 1, blockedBy: value === undefined ? null : { line: 2, value } });
+  assert.equal(blockedByError(task(1, 'None')), null);
+  assert.equal(blockedByError(task(3, 'Task 1, Task 2')), null);
+  assert.match(blockedByError(task(2)), /Task 2 has no "\*\*Blocked by:\*\*" line/);
+  assert.match(blockedByError(task(2, '')), /"None" or a list like "Task 1, Task 3"/);
+  assert.match(blockedByError(task(2, 'the API task')), /"None" or a list like "Task 1, Task 3"/);
+  assert.match(blockedByError(task(2, 'Task 1 and Task 3')), /"None" or a list like/);
+  assert.match(blockedByError(task(2, 'Task 2')), /Task 2 is blocked by Task 2; a task waits only for earlier tasks/);
+  assert.match(blockedByError(task(2, 'Task 1, Task 4')), /Task 2 is blocked by Task 4; a task waits only for earlier tasks/);
+});
 
 test('plans: parse, tick, completion', () => {
   const p = parsePlan(PLAN);

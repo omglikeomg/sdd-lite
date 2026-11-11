@@ -21,7 +21,7 @@ export function parsePlan(text) {
   lines.forEach((line, i) => {
     const t = /^### Task (\d+):\s*(.+?)\s*$/.exec(line);
     if (t) {
-      current = { number: Number(t[1]), title: t[2], line: i + 1, checkboxes: [] };
+      current = { number: Number(t[1]), title: t[2], line: i + 1, checkboxes: [], blockedBy: null };
       tasks.push(current);
       return;
     }
@@ -29,6 +29,8 @@ export function parsePlan(text) {
       current = null;
       return;
     }
+    const bb = /^\*\*Blocked by:\*\*\s*(.*?)\s*$/.exec(line);
+    if (bb && current && !current.blockedBy) current.blockedBy = { line: i + 1, value: bb[1] };
     const cb = /^\s*- \[( |x|X)\]/.exec(line);
     if (cb && current) current.checkboxes.push({ line: i + 1, checked: cb[1] !== ' ' });
   });
@@ -53,6 +55,17 @@ export function parsePlan(text) {
     deferred,
     merged,
   };
+}
+
+// A task's `**Blocked by:**` line is "None" or earlier tasks of the same plan ("Task 1, Task 3").
+export function blockedByError(task) {
+  const n = task.number;
+  if (!task.blockedBy) return `Task ${n} has no "**Blocked by:**" line; write "None" or the earlier tasks it needs, like "Task 1"`;
+  const { value } = task.blockedBy;
+  if (value === 'None') return null;
+  if (!/^Task \d+(, Task \d+)*$/.test(value)) return `Task ${n}: "**Blocked by:** ${value}" must be "None" or a list like "Task 1, Task 3"`;
+  const later = value.match(/\d+/g).map(Number).find((b) => b >= n);
+  return later === undefined ? null : `Task ${n} is blocked by Task ${later}; a task waits only for earlier tasks of its plan`;
 }
 
 // Tick every checkbox of the given tasks; leave other tasks untouched.
