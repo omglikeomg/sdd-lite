@@ -11,6 +11,11 @@ A repository joins the hub when its architecture map exists and `pnpm check` pas
 
 **Announce at start:** "Using onboard-repository to draft the architecture map for <repo>."
 
+## When NOT to use
+
+- The repository is already onboarded and its code changed: its map changes with that work, in the completion PR or the bounded work's hub PR (`hub-workflow`).
+- Reviewing a pull request on it: `review-pull-request`.
+
 ## Checklist
 
 Create a todo for each item and complete them in order.
@@ -33,3 +38,13 @@ Create a todo for each item and complete them in order.
 | "I'll describe the architecture from the README" | READMEs drift. The graph and the code are the evidence; the README is a lead. |
 | "This module looks unused, I'll leave it out" | If it matches `mustDocument`, the check needs it. Say it looks unused. |
 | "I know how NestJS apps are usually structured" | Describe this one. Generic structure is not documentation. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] The graph was refreshed in this session — **Evidence:** the pasted `Rebuilt:` line.
+- [ ] Every file the map cites was opened, and every `mustDocument` file is cited — **Evidence:** a read of each cited file in the conversation and a passing `pnpm check`.
+- [ ] The map is linked from "Product repositories" in `docs/ARCHITECTURE.md` — **Evidence:** the link in the branch's diff.
+- [ ] The hand-over names what the code could not tell — **Evidence:** the summary lists owners, deployment and surprises, or says there were none.
+- [ ] Nothing was pushed without a go-ahead — **Evidence:** your partner's message right before the push.

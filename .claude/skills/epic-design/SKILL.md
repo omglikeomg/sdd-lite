@@ -1,6 +1,6 @@
 ---
 name: epic-design
-description: Use when someone brings a PRD, product brief or large outcome that needs several pieces of work, or asks to create or refine an epic - challenges the requirements and the technical design in a short conversation before writing the epic's design and phases
+description: Use when someone brings a PRD, product brief or large outcome that needs several pieces of work, or asks to create or refine an epic - produces the epic's agreed design and its phases, each shippable alone
 ---
 
 # Epic design
@@ -16,6 +16,12 @@ This skill replaces brainstorming's "decompose into sub-projects" step for work 
 <HARD-GATE>
 Do not write `docs/epics/<slug>/README.md` until the question rounds are finished and your human partner has approved the summary of agreed answers. Do not start any phase.
 </HARD-GATE>
+
+## When NOT to use
+
+- One change in one repository with a clear outcome: classify it Trivial, Bounded or Architectural and follow `hub-workflow`.
+- A phase of an approved epic is starting: `pnpm plan:new <phase-slug> --repos <…> --epic <slug>` and `superpowers:brainstorming` design it.
+- An idea with no PRD, brief or outcome yet: `superpowers:brainstorming` first.
 
 ## Checklist
 
@@ -43,3 +49,13 @@ Create a todo for each item and complete them in order.
 | "I'll leave a requirement unmapped until we know more" | Map it to a phase, a spike, or out of scope with the reason. The check enforces it. |
 | "One big phase is simpler" | Phases ship alone. If a phase cannot be released by itself, split it. |
 | "I'll write phase specs now while I have context" | Each phase is designed when it starts, on the code as it is then. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] Every requirement in `prd.md` has a bold `REQ-n` ID — **Evidence:** the IDs in `docs/epics/<slug>/prd.md`.
+- [ ] Your human partner approved the summary of agreed answers before the README existed — **Evidence:** their approval message in the conversation, before the `docs(epic): <slug>` commit.
+- [ ] Every `REQ-n` maps to a phase, a spike or out of scope with its reason — **Evidence:** the Requirement map in `docs/epics/<slug>/README.md` and a passing `pnpm check`.
+- [ ] No phase was started — **Evidence:** no `plan:new` or `work:start` ran in this session.
+- [ ] Nothing left the machine without a go-ahead — **Evidence:** your partner's message right before `pnpm epic:pr <slug> --create`.

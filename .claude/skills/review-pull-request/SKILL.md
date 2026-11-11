@@ -1,6 +1,6 @@
 ---
 name: review-pull-request
-description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, or wants a finding of their own written up as a review comment
+description: Use when your human partner asks for help reviewing a pull request someone else wrote (a teammate's or another agent's) in a product repository of the hub, or wants a finding of their own written up as a review comment - drafts review comments grounded in the hub's specs and graph, for your partner to post
 ---
 
 # Review a pull request
@@ -16,6 +16,12 @@ This is not `superpowers:requesting-code-review`, which checks your own branch b
 <HARD-GATE>
 Never post, approve or request changes on the pull request, and never push to its branch. The review worktree is read-only. Your output is a draft file and the conversation.
 </HARD-GATE>
+
+## When NOT to use
+
+- Your own branch, before you open its PR: `superpowers:requesting-code-review`.
+- Feedback someone left on your PR: `superpowers:receiving-code-review`.
+- Opening a pull request: `hub-workflow`.
 
 ## Checklist
 
@@ -115,3 +121,12 @@ Before showing any comment:
 | "I'll post the comments to save time" | Your partner posts. Draft only. |
 | "Nothing found in the first pass, done" | Do the second pass and the impact step; quiet diffs hide broken callers. |
 | "I'm fairly sure it's a bug" | Fairly sure is a `[question]`. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] The diff was read to its last line — **Evidence:** the last read of `.reviews/<repo>-<pr>/pr.diff` reaches its final line.
+- [ ] Every comment passed "Verifying a comment" — **Evidence:** line numbers from a fresh read of the review worktree, and a verbatim `path:line` snippet for each outside claim.
+- [ ] At most two `[heads-up]` comments — **Evidence:** their count in `.reviews/<repo>-<pr>/review.md`.
+- [ ] Nothing was posted, approved or pushed — **Evidence:** no `gh pr review`, `gh pr comment` or `git push` ran; the output is `review.md` and the conversation.

@@ -1,0 +1,12 @@
+{
+  "positive": [
+    "Help me review Ana's pull request 57 on the api repository",
+    "Another agent opened a PR on web; can you review it with me?",
+    "Write up my finding on this PR as a review comment"
+  ],
+  "negative": [
+    { "prompt": "I finished implementing the feature, check it meets the requirements before merging", "owner": "superpowers:requesting-code-review" },
+    { "prompt": "A reviewer left feedback on my PR, how should I respond?", "owner": "superpowers:receiving-code-review" },
+    { "prompt": "Open the pull request for my bounded fix", "owner": "hub-workflow" }
+  ]
+}

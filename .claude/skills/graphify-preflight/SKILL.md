@@ -13,6 +13,12 @@ Design starts from the system that exists. This skill refreshes the knowledge gr
 
 It is how `superpowers:brainstorming` reads the project before its first message, and it runs every time. Scale it to the tier: one or two queries for Bounded work, the full checklist for Architectural work.
 
+## When NOT to use
+
+- Trivial work: it skips design; state the change in one line and start it (`hub-workflow`).
+- Reviewing someone else's pull request: `review-pull-request` refreshes the graph through `pnpm review:start` and maps the impact itself.
+- Onboarding a repository: `onboard-repository` reads the graph for the whole repository.
+
 ## Checklist
 
 Create a todo for each item and complete them in order.
@@ -63,3 +69,12 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 | "Nothing similar exists" after one query | Ask a second question in different words and check the feature documents. |
 | "I'll query without refreshing, it was built recently" | Submodule commits do not refresh the hub's graph. Refresh. |
 | "The Context block can list files I have not opened" | Every path in it was read in this session, or it is not in the block. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] The graph was refreshed in this session — **Evidence:** the pasted `[graphify watch]` line.
+- [ ] Every path in the Context block was opened in this session — **Evidence:** a read of each path earlier in the conversation.
+- [ ] Every `INFERRED` or `AMBIGUOUS` edge you kept was confirmed in the code — **Evidence:** the file and line that confirms it, next to the claim.
+- [ ] The Context block is where the tier puts it — **Evidence:** the block in the conversation (Bounded) or the spec's `## Context` (Architectural).

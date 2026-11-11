@@ -1,0 +1,12 @@
+{
+  "positive": [
+    "Before we design the refund flow, gather what already exists in the code and the ADRs",
+    "What specs, ADRs and existing code does the knowledge graph have about invoices?",
+    "Start a bug investigation: what do we already know about the checkout timeout from the graph?"
+  ],
+  "negative": [
+    { "prompt": "Review PR 42 in the api repository for me", "owner": "review-pull-request" },
+    { "prompt": "Onboard the new web repository into the hub", "owner": "onboard-repository" },
+    { "prompt": "This test fails intermittently, find the root cause of the bug", "owner": "superpowers:systematic-debugging" }
+  ]
+}

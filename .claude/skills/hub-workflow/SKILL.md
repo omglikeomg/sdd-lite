@@ -1,6 +1,6 @@
 ---
 name: hub-workflow
-description: Use when starting, resuming, handing off or finishing any work in the hub or its product repositories under repos/ - before creating branches, worktrees, commits, pull requests, or editing specs, plans, features or architecture documents - and when work failed QA and must be reverted
+description: Use when starting, resuming, handing off or finishing any work in the hub or its product repositories under repos/: a trivial change, a bounded fix, planned or epic work, creating branches, worktrees or commits, opening pull requests, editing specs, plans, features or architecture documents, or reverting work that failed QA - names the hub command for each stage of the work
 ---
 
 # Hub workflow
@@ -12,6 +12,12 @@ Every stage of work in this hub has one command that performs it. This skill tel
 **Announce at start:** "Using hub-workflow to pick the command for this stage."
 
 The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills still drive design and execution; this skill only covers the moments around them.
+
+## When NOT to use
+
+- Inside a design: `graphify-preflight` and `superpowers:brainstorming` do the work; come back here when it is time to start it.
+- Inside a task: Superpowers' execution skills drive the code; come back here for the commit, the PR and the completion.
+- Changing the hub itself (its tools, skills or documents): there is no `work:start` or `plan:start` for that; use a `<type>/<slug>` hub branch and a PR, with `pnpm check` and `pnpm test` passing before each commit.
 
 ## Pick the stage
 
@@ -60,3 +66,12 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | "writing-plans offers to execute, I'll pick subagent-driven" | Decline. The spec PR merges first; `plan:start` and a new session in its worktree execute it. |
 | "The ruling is in the ledger, that's enough" | Superpowers deletes the ledger when the final review is clean. Every ruling goes in a `Ruling:` footer. |
 | "I'll copy the acceptance criteria into the feature doc now" | Living documents change in the completion PR; `plan:complete` moves them. |
+
+## Verification
+
+Before you say this skill's work is done:
+
+- [ ] Each stage ran through its hub command — **Evidence:** the command and its output in the conversation; no hand-made branch, worktree, footer or PR text.
+- [ ] Product code changed only in a `.worktrees/…` worktree — **Evidence:** `git -C repos/<name> status --short` prints nothing.
+- [ ] Every outward action had its own go-ahead — **Evidence:** your partner's message right before each push, `--create` or GitHub write.
+- [ ] `pnpm check` passed before each hub commit — **Evidence:** its passing output, run after the last edit and before the commit.
