@@ -263,7 +263,7 @@ An epic is an outcome too big for one design spec: usually a PM's PRD plus an en
 ```mermaid
 flowchart TD
   prd[PRD from the PM + your technical design] --> new[pnpm epic:new slug --prd file]
-  new --> skill[epic-design skill: preflight, then up to 3 rounds of challenging questions]
+  new --> skill[epic-design skill: preflight, then rounds of challenging questions until none is left]
   skill --> write[README.md: requirement map, direction, phases]
   write --> pr[pnpm epic:pr slug: PM and tech lead review, merge]
   pr --> p1[Phase 1: pnpm plan:new … --epic slug, the normal architectural cycle]
@@ -272,7 +272,7 @@ flowchart TD
 ```
 
 1. **Start.** Give the agent the PRD and your design; it runs `pnpm epic:new <slug> --prd <file> [--issue <n>]`, which opens the branch `docs/epic-<slug>`, stores the PRD and, in GitHub mode, creates or adopts the epic's issue.
-2. **Challenge.** The `epic-design` skill grounds itself in the graph, numbers the requirements, then asks at most three rounds of up to five questions, each with its recommended answer: requirements first, then edge cases and failure modes, then phase boundaries, contracts and decisions. Nothing is written until you approve the summary.
+2. **Challenge.** The `epic-design` skill grounds itself in the graph, numbers the requirements, then asks rounds of up to five questions, each with its recommended answer. Each round asks only what you can answer now: a question waits while an answer it depends on is still open. Requirements, edge cases and failure modes, and phase boundaries, contracts and decisions are ground to cover, not an order. There is no round limit: questions end when none is left or you say to wrap up, and anything still open goes into the summary as a marked assumption. Nothing is written until you approve the summary.
 3. **Write and review.** It writes `README.md`; `pnpm check` verifies every requirement is mapped; `pnpm epic:pr <slug>` gives the PR text (in GitHub mode `--create` opens it and comments on the epic's issue). PM and tech lead review the direction and phases.
 4. **Phases.** Each phase starts only when the previous one is complete, as planned work (`pnpm plan:new <slug> --repos … --epic <epic>`) or bounded work. Its spec links the epic in `## Links` (`- Epic: [<epic>](../../epics/<epic>/README.md)`), its acceptance criteria name the requirements they fulfil (`(REQ-2)`), and the epic's Phases table gets its spec link. In GitHub mode its tracking issue becomes a sub-issue of the epic's issue, and its PRs carry the `epic:<slug>` label.
 5. **Done.** When every phase links a spec that is done or abandoned, set the epic to `done` in a hub PR; `pnpm epic:pr <slug>` then writes a closing PR text with `Closes #<epic issue>`.

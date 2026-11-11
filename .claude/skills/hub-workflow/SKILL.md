@@ -25,7 +25,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 |---|---|---|
 | Design anything | Classify the tier out loud, then `graphify-preflight` and `superpowers:brainstorming` | Trivial: no brainstorming, one line and `work:start`. Bounded: brainstorming's small change, its short design approved in chat, no spec file and no plan |
 | Onboard a product repository | `onboard-repository` skill (it runs `pnpm repo:add`, which builds the graph) | A person reviews the drafted map in the hub PR |
-| Turn a PRD or large outcome into an epic | `epic-design` skill (it runs `pnpm epic:new <slug> --prd <file>`) | Up to three rounds of questions before writing; then `pnpm epic:pr <slug>` |
+| Turn a PRD or large outcome into an epic | `epic-design` skill (it runs `pnpm epic:new <slug> --prd <file>`) | Rounds of questions, each asking only what can be answered now, before writing; then `pnpm epic:pr <slug>` |
 | Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
 | Start **trivial** or **bounded** work | `pnpm work:start <repo> <type>/<slug> [--issue <n>]` | Work in the printed worktree; with `--issue`, read the saved issue context first |
 | Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths; decline writing-plans' offer to execute |
