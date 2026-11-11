@@ -15,7 +15,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 
 ## When NOT to use
 
-- Inside a design: `graphify-preflight` and `superpowers:brainstorming` do the work; come back here when it is time to start it.
+- Inside a design: `graphify-preflight` and `superpowers:brainstorming` do the work; come back here before you ask approval of a written spec, and when it is time to start the work.
 - Inside a task: Superpowers' execution skills drive the code; come back here for the commit, the PR and the completion.
 - Changing the hub itself (its tools, skills or documents): there is no `work:start` or `plan:start` for that; use a `<type>/<slug>` hub branch and a PR, with `pnpm check` and `pnpm test` passing before each commit.
 
@@ -29,6 +29,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
 | Start **trivial** or **bounded** work | `pnpm work:start <repo> <type>/<slug> [--issue <n>]` | Work in the printed worktree; with `--issue`, read the saved issue context first |
 | Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths; decline writing-plans' offer to execute |
+| Ask approval of a written design spec (architectural work, epic phases) | After brainstorming's builder check, start a fresh `general-purpose` subagent with `spec-doubt-prompt.md` from this skill's folder: the spec and the constraints its `## Context` cites, none of your reasoning | Sort each finding as a contract misread (fix what you gave it), a fix to the spec, an accepted trade-off (write it in the spec) or noise. Rerun on the changed spec, at most three rounds; bring what is still open to your partner with the approval request |
 | Approve a plan's tasks, once writing-plans saved it | Show each plan's task list, one line per task: its title, its `Blocked by:` and its test seam (the task's `Test:` file and the test that proves it) | Wait for your human partner's approval before the spec PR. The list replaces writing-plans' request to review the whole plan |
 | Open the spec PR | `pnpm check`, commit `docs(spec): <id> <slug>`, `pnpm plan:pr <id> --spec [--create]` | Ask your human partner before `--create` or any push |
 | Execute an approved plan | `pnpm plan:start <id> --repo <name>` | Start the session in the printed worktree |
@@ -61,6 +62,8 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 |---|---|
 | "It's faster to `git switch -c` myself" | Hand-made branches skip the fresh fetch and the hook self-test. Use `work:start` or `plan:start`. |
 | "They're busy, I'll skip the task list and open the spec PR" | The list is the plan in one line per task, quick to approve. Show it and wait; the spec PR comes after the approval. |
+| "The builder check was clean and they're ready to approve" | The builder check asks what is missing, not what is wrong. Run the adversarial check, then ask. |
+| "I'll give the doubt subagent my reasoning so it has context" | Your reasoning makes it agree with you. Give it the spec and the constraints only. |
 | "I'll tick the boxes so the plan looks current" | `pnpm check` rejects hand-ticked boxes. `plan:status` shows progress. |
 | "I'll write the PR description myself" | `plan:pr` and `work:pr` carry the footers the squash commit needs and post the issue comment. Edit the text if needed; keep the footers. |
 | "I'll just move the label to pending review" | Labels follow the commands; a hand-set label is overwritten at the next step. Run the step's command. |
