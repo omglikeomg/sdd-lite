@@ -12,7 +12,7 @@ This gets you from a fresh laptop to your first merged change in about thirty mi
 | Graphify | 0.9.80 or newer | `uv tool install graphifyy` (the package name has two y's) |
 | A coding agent | Claude Code or OpenCode | see the agent's own documentation |
 | GitHub CLI `gh` | current, logged in (`gh auth login`) | only if the hub has GitHub mode on; see `docs/GITHUB.md` |
-| Superpowers | current | in Claude Code: `/plugin install superpowers@claude-plugins-official`; in OpenCode: follow [Superpowers for OpenCode](https://github.com/obra/superpowers/blob/main/docs/README.opencode.md) (the config key differs between OpenCode V1 and V2) |
+| Superpowers | current | in Claude Code: `/plugin marketplace add obra/superpowers`, then `/plugin install superpowers@superpowers-dev`; in OpenCode: follow [Superpowers for OpenCode](https://github.com/obra/superpowers/blob/main/docs/README.opencode.md) (the config key differs between OpenCode V1 and V2) |
 
 Then clone the hub with its product repositories and set it up:
 

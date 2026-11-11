@@ -11,7 +11,7 @@ Design starts from the system that exists. This skill refreshes the knowledge gr
 
 **Announce at start:** "Using graphify-preflight to gather existing context before designing."
 
-It is the "Explore project context" step of `superpowers:brainstorming`. Scale it to the tier: one or two queries for Bounded work, the full checklist for Architectural work.
+It is how `superpowers:brainstorming` reads the project before its first message, and it runs every time. Scale it to the tier: one or two queries for Bounded work, the full checklist for Architectural work.
 
 ## Checklist
 

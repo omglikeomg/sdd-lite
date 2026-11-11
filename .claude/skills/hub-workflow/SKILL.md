@@ -17,7 +17,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 
 | You are about to… | Run (from the hub root) | Then |
 |---|---|---|
-| Design anything | Classify the tier out loud, then `graphify-preflight` and `superpowers:brainstorming` | Trivial: no brainstorming, one line and `work:start`. Bounded: brainstorming's bounded path, a design approved in chat and no spec or plan |
+| Design anything | Classify the tier out loud, then `graphify-preflight` and `superpowers:brainstorming` | Trivial: no brainstorming, one line and `work:start`. Bounded: brainstorming's small change, its short design approved in chat, no spec file and no plan |
 | Onboard a product repository | `onboard-repository` skill (it runs `pnpm repo:add`, which builds the graph) | A person reviews the drafted map in the hub PR |
 | Turn a PRD or large outcome into an epic | `epic-design` skill (it runs `pnpm epic:new <slug> --prd <file>`) | Up to three rounds of questions before writing; then `pnpm epic:pr <slug>` |
 | Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
