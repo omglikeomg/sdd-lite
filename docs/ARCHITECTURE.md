@@ -48,6 +48,7 @@ flowchart LR
 | `.claude/skills/hub-workflow/SKILL.md` | Maps each stage of the work to the command that performs it |
 | `.claude/skills/onboard-repository/SKILL.md` | Drafts a new repository's architecture map from the knowledge graph |
 | `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in rounds of questions that each ask only what can be answered now, then writes the epic |
+| `.claude/skills/wait-what/SKILL.md` | Explains a term from the glossary, specs and code when a person asks, and proposes a missing glossary entry |
 | `.claude/skills/review-pull-request/SKILL.md` | Prepares a teammate's pull request with the hub's context and drafts review comments for a person to post |
 
 The tools are plain Node.js modules with no dependencies, so the hub needs nothing installed beyond Node, git and Graphify.
