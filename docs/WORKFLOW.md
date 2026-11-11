@@ -67,7 +67,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 
 ## Work tiers
 
-Superpowers' brainstorming classifies every request out loud as a spike, bounded or architectural change, and follows a different path for each. We add one tier below it and one above it; spikes follow Superpowers (see "Spikes").
+Superpowers' brainstorming sizes every request: a quick, clear task it just does, a small change gets a short design, a project gets a full written design. Those are our Trivial, Bounded and Architectural tiers; we add Epic above them, and spikes follow Superpowers (see "Spikes").
 
 | Tier | Example | What you produce | IDs |
 |---|---|---|---|
@@ -107,7 +107,7 @@ It moves up to Bounded as soon as it changes behaviour a feature document descri
 ### Bounded work
 
 1. Graph preflight (see below), scaled down: one or two queries.
-2. Brainstorming's bounded path presents a short design in chat and writes no spec or plan; nothing starts before a person says yes. The next step is `work:start`.
+2. Brainstorming treats it as a small change: a short design, approved by a person before anything starts. In the hub that design stays in chat and later in the commit's paragraphs (step 4), with no spec file and no plan; `work:start` takes the place of writing-plans.
 3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
 4. Commit with a body made of labelled paragraphs, which `work:pr` turns into the PR's sections:
 
@@ -183,7 +183,7 @@ If merged work fails QA, `pnpm plan:revert 000042` prints, without running anyth
 
 ## Graph preflight
 
-Before any design, run the `graphify-preflight` skill (`.claude/skills/graphify-preflight/SKILL.md`). It refreshes the graph with `graphify update .`, queries it, opens the files it points to, and produces a `## Context` block: existing modules to reuse, constraining ADRs and features, high-traffic modules the change touches, and open risks. Brainstorming's "Explore project context" step **is** this preflight.
+Before any design, run the `graphify-preflight` skill (`.claude/skills/graphify-preflight/SKILL.md`). It refreshes the graph with `graphify update .`, queries it, opens the files it points to, and produces a `## Context` block: existing modules to reuse, constraining ADRs and features, high-traffic modules the change touches, and open risks. Brainstorming reads the project before its first message; this preflight **is** that reading, and it runs every time.
 
 Only edges tagged `EXTRACTED` count as facts. `INFERRED` and `AMBIGUOUS` edges are leads to verify by reading the code.
 
@@ -477,7 +477,7 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 
 ## Tested with
 
-The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 6.4.1**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers.
+The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 7.0.2**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers. Superpowers 7.0.0, which the official marketplace still installs, passes the same checks.
 
 - `pnpm doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
 - `pnpm test` runs `tools/test/compat.test.mjs`, which builds a small graph with the installed Graphify and checks every behaviour the preflight and the reviews use. Each part skips itself when its tool is missing, as in CI.
