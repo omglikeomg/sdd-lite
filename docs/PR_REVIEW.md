@@ -70,7 +70,11 @@ The agent reads the whole diff and every listed document, queries the graph, and
 | **Risk** | Security, performance, concurrency, failure handling, compatibility, operability: the checklist in `.claude/skills/review-pull-request/risk-checklist.md` |
 | **Team guideline** | One lens per guideline your team listed for the repository |
 
-Say "next" to follow the suggested order, name the lenses you want, or say "all" for one pass over everything. A small PR rarely needs more than Intent, Proof and Risk.
+Say "next" to follow the suggested order, name the lenses you want, or say "all". A small PR rarely needs more than Intent, Proof and Risk.
+
+With "all", each lens runs in its own fresh subagent, all at once, so no lens is biased by what another found. The subagents only report; your agent merges their sections into one `review.md`, folds a finding two lenses share into one comment, and keeps the `[heads-up]` limit across the whole review.
+
+**The mutation check.** The Proof lens does not take a test's word for it. For up to three conditions the PR adds, it inverts the condition in the review worktree, runs the suite and restores the file; a mutation the suite does not catch is a finding that names the missing test. It runs the PR's code on your machine, so the agent asks you first, installs dependencies in the review worktree, and leaves the worktree clean. With "all" it runs after the lens subagents return, because they read the same files.
 
 ### 4. Read the comments
 
@@ -83,6 +87,8 @@ Each comment has a **label**:
 | `[question]` | Looks off, may be intentional | Post it as a question; the agent uses it whenever it is not sure |
 | `[nit]` | Cosmetic | Post a few at most, or skip them |
 | `[heads-up]` | Easy to miss, hard to undo | Usually worth posting; at most two per review |
+
+A comment tagged `· pre-existing` points at a defect the default branch already has. It is never blocking for this PR unless the PR makes it reachable or worse; post it, or open an issue instead. A lens that finds nothing says so in one line with what it checked: an empty lens is a result, not a gap. A structural comment (where code lives, how it is split) always names the restructuring it proposes.
 
 And two parts:
 
@@ -123,7 +129,7 @@ A guideline can live in the product repository (it changes with the code) or in 
 ## What it does not do
 
 - It never posts, approves, requests changes or pushes. You do.
-- It does not replace running the code. If a comment depends on runtime behaviour, the reviewer part says how sure the agent is; run the tests in the worktree when it matters (install dependencies there first).
+- It does not replace running the code. The mutation check runs the suite for the conditions it mutates; for any other runtime claim, the reviewer part says how sure the agent is.
 - The graph describes `main`, not the PR: it answers "who relies on what this PR changes", not "what does the PR's code call".
 - `review:start` fetches `refs/pull/<n>/head`, which GitHub publishes. Other hosts name pull requests differently.
 - Reviewing your own branch before opening a PR is a different moment, covered by Superpowers' own code review during execution.

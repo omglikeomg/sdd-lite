@@ -14,7 +14,7 @@ You help a person review someone else's code. They own the review: you draft com
 This is not `superpowers:requesting-code-review`, which checks your own branch before you open a PR. Here the author is someone else, and every comment must survive their reply.
 
 <HARD-GATE>
-Never post, approve or request changes on the pull request, and never push to its branch. The review worktree is read-only. Your output is a draft file and the conversation.
+Never post, approve or request changes on the pull request, and never push to its branch. Never commit in the review worktree or leave it changed: the Proof lens's mutation check is the only edit, and it is restored before you go on. Your output is a draft file and the conversation.
 </HARD-GATE>
 
 ## When NOT to use
@@ -31,8 +31,8 @@ Create a todo for each item and complete them in order.
 2. **Read the diff end to end.** `.reviews/<repo>-<pr>/pr.diff` can be long: keep reading with an increasing offset until the last line. Most missed findings come from reviewing only the first part.
 3. **Read what governs the change.** Every document the context lists: the repository map (invariants first), covering area documents, the patterns they cite, contracts, ADRs, the design spec and plan when there is one, the issue when there is one, and the team guidelines. Note a listed guideline that is missing; do not skip it silently.
 4. **Map the impact.** For each changed exported symbol, route or module, `graphify affected "<Symbol>"` (every importer, caller and citing document, two levels deep) and `graphify explain "<Symbol>"` (its own connections, at most 20; for a method use `"<path>::<method>"`), and, where two parts must stay connected, `graphify path "<A>" "<B>"`. The graph describes the default branch, so it shows who relies on the code being changed. Callers the diff does not touch, and documents citing a changed file (incoming `references` edges), are what reviewers miss. Confirm each lead by opening the file; `INFERRED` edges are guesses until read.
-5. **Propose the lenses** (format below) and ask which to run. In the default interactive mode, run one lens per turn and wait for "next". If your human partner says "all", run them in order and write one file.
-6. **Review each lens.** Draft the comments, then make a second, independent pass over the whole diff against the same lens: files you did not cite, rules you did not check. Add what you find; drop nothing from the first pass.
+5. **Propose the lenses** (format below) and ask which to run. In the default interactive mode, run one lens per turn and wait for "next". If your human partner says "all", follow "Running all lenses" below.
+6. **Review each lens.** Draft the comments, then make a second, independent pass over the whole diff against the same lens: files you did not cite, rules you did not check. Add what you find; drop nothing from the first pass. The Proof lens ends with the mutation check (below).
 7. **Verify every comment** (checklist below), then append the lens's output to `.reviews/<repo>-<pr>/review.md` and show it.
 8. **Hand over.** Summarise the blocking comments in one line each. When your human partner says the review is done, suggest `pnpm review:cleanup <repo> <pr>`.
 
@@ -41,7 +41,7 @@ Create a todo for each item and complete them in order.
 | Lens | When | Asks |
 |---|---|---|
 | **Intent** | Always | Planned work: does the PR deliver its tasks and the spec's criteria, every Review Focus item, and nothing the spec did not ask for? Are the rulings acceptable, or should one change the spec instead? Bounded work: does it fix what the issue describes, at the cause? Neither: does it do what its description says? |
-| **Proof** | Always | Is every criterion this PR implements proven by a test titled with its ID? Is any test citing an ID the hub does not define, or one the spec retires? Do the tests fail without the change? Does behaviour the change relies on have a test (Beyoncé Rule: if you rely on it, put a test on it)? |
+| **Proof** | Always | Is every criterion this PR implements proven by a test titled with its ID? Is any test citing an ID the hub does not define, or one the spec retires? Do the tests fail without the change? Answer that with the mutation check, not by reading. Does behaviour the change relies on have a test (Beyoncé Rule: if you rely on it, put a test on it)? |
 | **Architecture** | Always | Does the change respect the repository map's invariants, the covering areas and the cited ADRs? Does it reuse what exists (step 4) or rebuild it? Does a structural change need the map updated? |
 | **Patterns** | The map or a covering area cites a pattern | Does new code follow each cited pattern's rules? Does a change to a known deviation make it worse, or bring it in line? |
 | **Contracts** | The repository provides or consumes a contract | Does it change anything a consumer can observe (Hyrum's Law: every observable behaviour gets relied on, promised or not), such as fields, error text, ordering or timing, or rely on behaviour the provider does not promise? Does it add a second version where extending the one would do (One-Version Rule: one version at a time)? A breaking change needs an ADR. |
@@ -65,7 +65,7 @@ Suggested order: Intent, Proof, Risk, Architecture, Contracts. Which lenses shou
 
 ## Comments
 
-Write only comments that ask for a change or an answer. No praise-only comments, no restating what the code does.
+Write only comments that ask for a change or an answer. No praise-only comments, no restating what the code does. A lens with nothing to raise says so in one line, naming what it checked: zero findings is a valid result.
 
 | Label | Use when |
 |---|---|
@@ -77,9 +77,10 @@ Write only comments that ask for a change or an answer. No praise-only comments,
 
 Each comment has two parts.
 
-**For the author** (ready to paste): ``` `src/payments/payments.service.ts` lines 40–52 · Intent · [blocking] ```, then the comment.
+**For the author** (ready to paste): ``` `src/payments/payments.service.ts` lines 40–52 · Intent · [blocking] ```, then the comment. A defect the default branch already has gets ` · pre-existing` after the label; it is `[blocking]` only when this PR makes it reachable or worse, which makes it a regression and drops the tag.
 - Lead with what you noticed, in a teammate's voice: plain words, contractions, no "This code…" or "Consider…" openers.
 - `[blocking]`: what is wrong, why it matters (the rule or the runtime consequence), and the fix as a `suggestion` block or numbered steps. Point to an existing example in the codebase when there is one.
+- A structural `[blocking]` or `[suggestion]` (where code lives, how it is split, a missing model or a duplicated helper) names the restructuring: the move, where to, and the existing code to reuse.
 - `[suggestion]`: hedge on taste ("I think", "maybe"), never on facts; offer an easy out.
 - `[question]`: one honest question, no suggestion block: "<what you noticed>: intended, or am I missing something?"
 
@@ -91,6 +92,25 @@ Each comment has two parts.
 - **Confidence:** how sure you are and what would prove you wrong.
 
 Start each lens's output with a two- or three-sentence summary for the author: warm, honest about the overall quality, no corporate phrasing. Order comments by file, then line.
+
+### Running all lenses
+
+When your human partner says "all", after steps 1–4:
+
+1. **Fan out.** In one turn, start one fresh `general-purpose` subagent per proposed lens with `lens-prompt.md` from this skill's folder. Each gets file paths, not your conclusions. Subagents return their section; they do not write files or start subagents.
+2. **Merge.** You write `.reviews/<repo>-<pr>/review.md`: the sections in the proposed order, the same file and lines raised by two lenses folded into one comment naming both, and at most two `[heads-up]` across the review.
+3. **Mutation check.** Run it yourself now, after every subagent has returned (it edits files they read), and append its findings to the Proof section.
+4. **Verify** each merged comment as in "Verifying a comment", then show the file.
+
+### Mutation check
+
+The Proof lens answers "do the tests fail without the change?" by experiment.
+
+1. Before the first install or test run of a review, ask your human partner: it runs the PR's code on their machine. If they decline, say the check did not run and why.
+2. Install dependencies in the review worktree with its repository's package manager, then run the suite once unchanged. A suite that fails before any mutation ends the check: report that instead.
+3. For each condition the PR adds, up to three: invert it (drop a negation, swap `<` for `>=`, `&&` for `||`), run the suite, then `git -C <worktree> checkout -- <file>`.
+4. `git -C <worktree> status --porcelain` prints nothing before you go on.
+5. A mutation the suite does not catch is a `[blocking]` finding when the condition implements a criterion, a `[suggestion]` otherwise. It names the test case that is missing; its Evidence holds the mutation and the passing run's output.
 
 ### Modes
 
@@ -122,6 +142,9 @@ Before showing any comment:
 | "They told me to post it and said they trust me" | Posting stays theirs, even when they ask. Hand over the draft and the command they would run. |
 | "Nothing found in the first pass, done" | Do the second pass and the impact step; quiet diffs hide broken callers. |
 | "I'm fairly sure it's a bug" | Fairly sure is a `[question]`. |
+| "The test obviously covers that branch" | Reading is not proof. Mutate it and run the suite. |
+| "The lenses can mutate while they run" | Other lenses read the worktree. Mutate after they return. |
+| "No findings looks lazy; I'll add a nit" | Zero findings is a valid result. Say what you checked. |
 
 ## Verification
 
@@ -130,4 +153,5 @@ Before you say this skill's work is done:
 - [ ] The diff was read to its last line — **Evidence:** the last read of `.reviews/<repo>-<pr>/pr.diff` reaches its final line.
 - [ ] Every comment passed "Verifying a comment" — **Evidence:** line numbers from a fresh read of the review worktree, and a verbatim `path:line` snippet for each outside claim.
 - [ ] At most two `[heads-up]` comments — **Evidence:** their count in `.reviews/<repo>-<pr>/review.md`.
+- [ ] The review worktree is unchanged — **Evidence:** empty `git -C <worktree> status --porcelain` after the mutation check.
 - [ ] Nothing was posted, approved or pushed — **Evidence:** no `gh pr review`, `gh pr comment` or `git push` ran; the output is `review.md` and the conversation.
