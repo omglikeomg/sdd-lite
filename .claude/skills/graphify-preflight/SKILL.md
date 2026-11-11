@@ -25,14 +25,15 @@ Create a todo for each item and complete them in order.
 
 1. **Refresh.** From the hub root run `GRAPHIFY_NO_TIPS=1 graphify update .` and paste its `[graphify watch]` line: `Rebuilt: … nodes, … edges, … communities`, or `No code-graph topology changes detected` when nothing changed. If it fails, stop and report it; do not query a stale graph.
 2. **LLM document layer?** `graphify update .` refreshes code and the structure of every Markdown file for free. If `graphify-out/cost.json` exists, someone ran the optional LLM pass in this clone, and documents that pass read are no longer re-read by `graphify update .`: their later edits are missing from the graph. For Architectural work, tell your human partner and ask whether to run `/graphify . --update` (it calls an LLM and costs tokens; it re-reads only changed files). Continue either way, noting the answer. Without `cost.json` there is nothing to ask.
-3. **Read the maps.** `docs/ARCHITECTURE.md`, the `docs/codebases/<repo>/ARCHITECTURE.md` of every repository the request touches, any area document whose name matches the domain, and every pattern in `docs/patterns/` those documents cite: new code follows them.
+3. **Read the maps.** `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`, the `docs/codebases/<repo>/ARCHITECTURE.md` of every repository the request touches, any area document whose name matches the domain, and every pattern in `docs/patterns/` those documents cite: new code follows them.
 4. **Query.** Two to four questions in the request's own words, for example:
    - `graphify query "how are invoices issued"`
    - `graphify explain "BillingService"` for every concrete class, module or route named in the request (`graphify explain "repos/api/src/billing/billing.service.ts::issue"` for a method, or when a name exists twice)
    - `graphify path "CheckoutController" "PaymentGateway"` when two parts must be connected
-5. **Find the reasons** (Chesterton's Fence: know why a thing is there before you change or remove it). For every module the answers touch, look for the documents citing it (`graphify affected "<Symbol>"` lists every importer, caller and citing document; `graphify explain` stops at 20 connections, so on busy modules it hides them), ADRs listed in `docs/ARCHITECTURE.md` under Evolution, `// WHY:` rationale nodes, and acceptance criteria in `docs/features/`. Documents link to code in the graph only through `` `path::Symbol` `` citations; `grep -rn "<file path>" docs/` finds those that cite a bare path.
-6. **Verify.** Open every file you will name in the Context block. `EXTRACTED` edges are facts; `INFERRED` and `AMBIGUOUS` edges are leads until the code confirms them.
-7. **Write the Context block** (format below) into the conversation for Bounded work, or into the design spec's `## Context` for Architectural work.
+5. **Check the terms.** For each domain word the request uses, find its entry in `docs/GLOSSARY.md`. A word with no entry, a word used in a different sense from its entry, or a word listed under another term's `_Avoid_:` line becomes an open question for brainstorming, naming the glossary's word: "You said 'account'; the glossary has **Customer** and **Login**. Which one closes?" Never pick a meaning silently.
+6. **Find the reasons** (Chesterton's Fence: know why a thing is there before you change or remove it). For every module the answers touch, look for the documents citing it (`graphify affected "<Symbol>"` lists every importer, caller and citing document; `graphify explain` stops at 20 connections, so on busy modules it hides them), ADRs listed in `docs/ARCHITECTURE.md` under Evolution, `// WHY:` rationale nodes, and acceptance criteria in `docs/features/`. Documents link to code in the graph only through `` `path::Symbol` `` citations; `grep -rn "<file path>" docs/` finds those that cite a bare path.
+7. **Verify.** Open every file you will name in the Context block. `EXTRACTED` edges are facts; `INFERRED` and `AMBIGUOUS` edges are leads until the code confirms them.
+8. **Write the Context block** (format below) into the conversation for Bounded work, or into the design spec's `## Context` for Architectural work.
 
 ## Context block format
 
@@ -49,6 +50,10 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 **Patterns to follow**
 - `docs/patterns/idempotent-message-handlers.md`: the new consumer records its key in the same transaction as the invoice.
 
+<!-- Only when a glossary term applies; otherwise leave the heading out. -->
+**Terms**
+- [Invoice](../../GLOSSARY.md#invoice): a request for payment sent to a customer after delivery.
+
 **Constraints**
 - ADR-0004 (immutable invoices): refunds create credit notes, never edit an invoice.
 - BILL-ISSUE-1 in `docs/features/billing.md` must keep passing.
@@ -58,6 +63,7 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 
 **Open questions for brainstorming**
 - Should saved cards live in the payments module or a new wallet module?
+- You said "bill"; the glossary lists it under _Avoid_ for **Invoice**. Same thing?
 ```
 
 ## Red flags
@@ -69,6 +75,7 @@ Document layer: structure only | LLM layer refreshed | LLM layer stale (human ch
 | "The graph says X calls Y" (edge is INFERRED) | Open the file. Inferred edges are guesses until read. |
 | "Nothing similar exists" after one query | Ask a second question in different words and check the feature documents. |
 | "I'll query without refreshing, it was built recently" | Submodule commits do not refresh the hub's graph. Refresh. |
+| "The word is obvious, everyone knows what an account is" | Check the glossary. A word it avoids or lacks is a question, not an assumption. |
 | "The Context block can list files I have not opened" | Every path in it was read in this session, or it is not in the block. |
 
 ## Verification
@@ -78,4 +85,5 @@ Before you say this skill's work is done:
 - [ ] The graph was refreshed in this session — **Evidence:** the pasted `[graphify watch]` line.
 - [ ] Every path in the Context block was opened in this session — **Evidence:** a read of each path earlier in the conversation.
 - [ ] Every `INFERRED` or `AMBIGUOUS` edge you kept was confirmed in the code — **Evidence:** the file and line that confirms it, next to the claim.
+- [ ] Every domain word in the request was checked against the glossary — **Evidence:** the `**Terms**` part and any term questions under Open questions, or one line saying no glossary term applied.
 - [ ] The Context block is where the tier puts it — **Evidence:** the block in the conversation (Bounded) or the spec's `## Context` (Architectural).
