@@ -93,6 +93,16 @@ export const AC_DEFINITION_RE = new RegExp(`\\*\\*(${AC_BODY})\\*\\*`, 'g');
 // A test title is a string literal opened right after "(": it('ID: …'), test.describe("ID: …"), and
 // the title call of table tests, it.each([...])('ID: %s …'), whose table may span several lines.
 export const TEST_TITLE_AC_RE = new RegExp(`\\(\\s*['"\`](${AC_BODY}):`, 'g');
+// A skipped or unwritten test proves nothing: a title counts as skipped when its own line, before
+// the title, calls `.skip`, `.todo`, `.fixme`, `xit`, `xtest` or `xdescribe`. A test inside a
+// `describe.skip` block on another line is not detected.
+export const SKIPPED_TEST_RE = /(?:\.(?:skip|todo|fixme)|\bx(?:it|test|describe))\s*[.(]/;
+export function testTitleCriteria(text) {
+  return [...text.matchAll(TEST_TITLE_AC_RE)].filter((m) => isAcId(m[1])).map((m) => {
+    const lineStart = text.lastIndexOf('\n', m.index) + 1;
+    return { id: m[1], skipped: SKIPPED_TEST_RE.test(text.slice(lineStart, m.index + 1)) };
+  });
+}
 
 export const ADR_REF_RE = /\bADR-(\d{1,5})\b/g;
 export function adrLabel(num) {

@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { HUB_ROOT, DIRS, loadConfig, loadAdrs, loadAcDefinitions, loadWork, read, mdFiles } from './lib/hub.mjs';
 import { splitFrontmatter, stripCode, codeSpans, links, headings, section } from './lib/markdown.mjs';
 import {
-  SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, TEST_TITLE_AC_RE, isAcId,
+  SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, testTitleCriteria,
   parsePlanBranch, specPath, SLUG_RE, REQ_DEFINITION_RE, REQ_REF_RE,
 } from './lib/conventions.mjs';
 import { parsePlan } from './lib/plans.mjs';
@@ -345,6 +345,7 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
     if (features.length > 1) for (const d of features.slice(1)) err(d.file, d.line, 'ac', `${id} is already defined in ${features[0].file}:${features[0].line}`);
   }
   const tested = new Set();
+  const skipped = new Set();
   for (const r of cfg.repos) {
     const st = repoState.get(r.name);
     if (!st) continue;
@@ -352,10 +353,9 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
       readFileSync(join(st.dir, f), 'utf8')
         .split('\n')
         .forEach((line, i) => {
-          for (const m of line.matchAll(TEST_TITLE_AC_RE)) {
-            if (!isAcId(m[1])) continue;
-            tested.add(m[1]);
-            if (!acDefs.has(m[1])) err(`${r.path}/${f}`, i + 1, 'ac', `test cites ${m[1]}, which no feature or design spec defines`);
+          for (const c of testTitleCriteria(line)) {
+            (c.skipped ? skipped : tested).add(c.id);
+            if (!acDefs.has(c.id)) err(`${r.path}/${f}`, i + 1, 'ac', `test cites ${c.id}, which no feature or design spec defines`);
           }
         });
     }
@@ -363,7 +363,9 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
   if (cfg.repos.every((r) => repoState.get(r.name))) {
     for (const [id, defs] of acDefs) {
       const feature = defs.find((d) => d.kind === 'feature');
-      if (feature && !tested.has(id)) err(feature.file, feature.line, 'ac', `${id} has no test whose title starts with "${id}:" in any configured repo`);
+      if (!feature || tested.has(id)) continue;
+      if (skipped.has(id)) err(feature.file, feature.line, 'ac', `${id} is cited only by skipped tests; a skipped or todo test proves nothing`);
+      else err(feature.file, feature.line, 'ac', `${id} has no test whose title starts with "${id}:" in any configured repo`);
     }
   }
 }

@@ -7,7 +7,9 @@ import { join, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { HUB_ROOT, DIRS, loadConfig, repoConfig, loadWork, loadAdrs, loadAcDefinitions, HubError, skipGraphify, read, mdFiles } from './lib/hub.mjs';
 import { git, gitTry, freshBase, showFile, hasRemote, logMessages } from './lib/git.mjs';
-import { parsePlanBranch, footerValues, taskNumbers, specPath, adrLabel, ADR_REF_RE, TEST_TITLE_AC_RE, isAcId } from './lib/conventions.mjs';
+import { parsePlanBranch, footerValues, taskNumbers, specPath, adrLabel, ADR_REF_RE, testTitleCriteria } from './lib/conventions.mjs';
+import { weakenedChecks } from './lib/floor.mjs';
+import { weakenedList } from './lib/pr-text.mjs';
 import { splitFrontmatter, section, links } from './lib/markdown.mjs';
 import { parsePlan } from './lib/plans.mjs';
 import { splitCriteria } from './lib/features.mjs';
@@ -49,16 +51,16 @@ const titleOf = (text) => /^# (.+)$/m.exec(text || '')?.[1] || '';
 const table = (head, rows) => [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.join(' | ')} |`)].join('\n');
 const code = (s) => `\`${s}\``;
 
-// Acceptance-criteria IDs cited by test titles in the given files of a checkout.
+// Acceptance-criteria IDs cited by the titles of tests that run (not skipped) in the given files.
 function citedCriteria(dir, files) {
   const cited = new Map();
   for (const f of files) {
     const abs = join(dir, f);
     if (!existsSync(abs)) continue;
-    for (const m of readFileSync(abs, 'utf8').matchAll(TEST_TITLE_AC_RE)) {
-      if (!isAcId(m[1])) continue;
-      if (!cited.has(m[1])) cited.set(m[1], new Set());
-      cited.get(m[1]).add(f);
+    for (const c of testTitleCriteria(readFileSync(abs, 'utf8'))) {
+      if (c.skipped) continue;
+      if (!cited.has(c.id)) cited.set(c.id, new Set());
+      cited.get(c.id).add(f);
     }
   }
   return cited;
@@ -224,6 +226,7 @@ function cmdStart(args) {
   const changedCites = citedCriteria(wt, changedTests);
   const guidelines = repo.reviewGuidelines.map((g) => `- ${code(g)}${existsSync(join(root, g)) ? '' : ': missing, tell your human partner'}`);
   const rel = (p) => p.slice(root.length + 1);
+  const weakened = weakenedChecks(diff, (f) => matchesAny(f, repo.tests));
 
   const context = [
     `# Review: ${repo.name} pull request #${pr}`,
@@ -257,6 +260,7 @@ function cmdStart(args) {
       ? table(['Criterion', 'Defined in', 'Tests'], [...changedCites].map(([id, fs]) => [id, defs.has(id) ? defs.get(id).map((d) => code(d.file)).join(', ') : '**not defined in the hub**', [...fs].map(code).join(', ')]))
       : 'None.',
     '',
+    ...(weakened.length ? ['## Checks weakened', '', weakenedList(weakened), ''] : []),
     '## Team guidelines',
     '',
     guidelines.length ? guidelines.join('\n') : `None configured (\`reviewGuidelines\` for ${repo.name} in hub.config.json).`,

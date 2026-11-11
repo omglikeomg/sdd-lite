@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parsePlanBranch, branchNameError, commitHeaderError, cleanMessage, footerValues, taskNumbers, isAcId,
-  parseSpecFilename, parsePlanFilename, TEST_TITLE_AC_RE, adrLabel,
+  parseSpecFilename, parsePlanFilename, TEST_TITLE_AC_RE, adrLabel, testTitleCriteria,
 } from '../lib/conventions.mjs';
+import { weakenedChecks } from '../lib/floor.mjs';
 import { splitFrontmatter, setFrontmatterValue, stripCode, codeSpans, links, section } from '../lib/markdown.mjs';
 import { globToRegExp, matchesAny } from '../lib/glob.mjs';
 import { parsePlan, tickTasks, rulingsFromLedger } from '../lib/plans.mjs';
@@ -12,7 +13,7 @@ import { loadAcDefinitions } from '../lib/hub.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { explanationSections, fixPrBody } from '../lib/pr-text.mjs';
+import { explanationSections, fixPrBody, featurePrBody } from '../lib/pr-text.mjs';
 
 test('plan branches carry type, six-digit ID and slug', () => {
   assert.deepEqual(parsePlanBranch('feat/000042-checkout-payments'), { type: 'feat', id: '000042', slug: 'checkout-payments' });
@@ -54,6 +55,92 @@ test('acceptance-criteria IDs exclude ADR and RFC', () => {
   const src = "it('BILL-ISSUE-1: issues', () => {});\ntest.describe(\"CHECKOUT-PAY-2: flow\", () => {});\nit('UTF-8 handling')\nit.each([\n  ['a', 1],\n])('COMPARE-PAGE-4: %s asks for ids', () => {});\nexpect(x).toBe('NOT-AN-ID-1')";
   assert.deepEqual([...src.matchAll(TEST_TITLE_AC_RE)].map((m) => m[1]), ['BILL-ISSUE-1', 'CHECKOUT-PAY-2', 'COMPARE-PAGE-4']);
   assert.equal(adrLabel('7'), 'ADR-0007');
+});
+
+test('skipped and todo tests are not proof of a criterion', () => {
+  const src = [
+    "it('BILL-ISSUE-1: issues', () => {});",
+    "it.skip('BILL-ISSUE-2: refunds', () => {});",
+    "test.todo('BILL-ISSUE-3: voids');",
+    "xit('BILL-ISSUE-4: x', () => {});",
+    "xtest('BILL-ISSUE-5: x', () => {});",
+    "test.fixme('BILL-ISSUE-6: x', async () => {});",
+    "it.skip.each([['a', 1]])('BILL-ISSUE-7: %s', () => {});",
+    "xdescribe('BILL-ISSUE-8: group', () => {});",
+    "test.describe('BILL-ISSUE-9: group', () => {});",
+  ].join('\n');
+  assert.deepEqual(testTitleCriteria(src).map((c) => [c.id, c.skipped]), [
+    ['BILL-ISSUE-1', false], ['BILL-ISSUE-2', true], ['BILL-ISSUE-3', true], ['BILL-ISSUE-4', true], ['BILL-ISSUE-5', true],
+    ['BILL-ISSUE-6', true], ['BILL-ISSUE-7', true], ['BILL-ISSUE-8', true], ['BILL-ISSUE-9', false],
+  ]);
+  assert.deepEqual(testTitleCriteria("it('UTF-8 handling')\nit('ADR-0003: x')"), [], 'only acceptance-criteria IDs');
+});
+
+test('weakened checks are found in a diff', () => {
+  const diff = [
+    'diff --git a/src/a.ts b/src/a.ts',
+    '--- a/src/a.ts',
+    '+++ b/src/a.ts',
+    '@@ -10,0 +11,2 @@',
+    '+  // @ts-ignore',
+    '+  const x = y as any; // eslint-disable-line no-explicit-any',
+    '@@ -20 +22 @@',
+    '-  // eslint-disable-next-line',
+    '+  return x;',
+    'diff --git a/src/a.spec.ts b/src/a.spec.ts',
+    '--- a/src/a.spec.ts',
+    '+++ b/src/a.spec.ts',
+    '@@ -3,3 +3,2 @@',
+    "-it('A-1: works', () => {",
+    "+it.skip('A-1: works', () => {",
+    '-  expect(a).toBe(1);',
+    "@@ -9 +8 @@",
+    "-describe('group', () => {",
+    "+describe.skip('group', () => {",
+    'diff --git a/src/b.spec.ts b/src/b.spec.ts',
+    'deleted file mode 100644',
+    '--- a/src/b.spec.ts',
+    '+++ /dev/null',
+    '@@ -1 +0,0 @@',
+    "-it('B-1: x', () => { expect(1).toBe(1); });",
+    'diff --git a/src/c.spec.ts b/src/c.spec.ts',
+    '--- a/src/c.spec.ts',
+    '+++ b/src/c.spec.ts',
+    '@@ -1 +1 @@',
+    '-  expect(c).toBe(1);',
+    '+  expect(c).toBe(1); ',
+    'diff --git a/vitest.config.ts b/vitest.config.ts',
+    '--- a/vitest.config.ts',
+    '+++ b/vitest.config.ts',
+    '@@ -5,2 +5,2 @@',
+    '-      lines: 80,',
+    '-      branches: 70,',
+    '+      lines: 60,',
+    '+      branches: 75,',
+  ].join('\n');
+  const isTest = (f) => f.endsWith('.spec.ts');
+  assert.deepEqual(weakenedChecks(diff, isTest), [
+    { kind: 'suppression', file: 'src/a.ts', line: 11, text: '// @ts-ignore' },
+    { kind: 'suppression', file: 'src/a.ts', line: 12, text: 'const x = y as any; // eslint-disable-line no-explicit-any' },
+    { kind: 'skipped-test', file: 'src/a.spec.ts', line: 3, text: "it.skip('A-1: works', () => {" },
+    { kind: 'skipped-test', file: 'src/a.spec.ts', line: 8, text: "describe.skip('group', () => {" },
+    { kind: 'removed-assertions', file: 'src/a.spec.ts', line: null, text: '1 fewer assertion' },
+    { kind: 'deleted-test', file: 'src/b.spec.ts', line: null, text: 'test file deleted' },
+    { kind: 'lowered-threshold', file: 'vitest.config.ts', line: 5, text: 'lines: 80 → 60' },
+  ]);
+  assert.deepEqual(weakenedChecks('', isTest), []);
+  const withContext = 'diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,2 +1,3 @@\n const a = 1;\n const b = 2;\n+// @ts-expect-error\n';
+  assert.deepEqual(weakenedChecks(withContext, isTest).map((w) => w.line), [3], 'context lines count towards line numbers');
+});
+
+test('weakened checks get their own PR section, absent when there are none', () => {
+  const args = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], sections: explanationSections(['Risk: low.']), refs: [], fixesRef: null };
+  assert.doesNotMatch(fixPrBody(args), /Checks weakened/);
+  const weakened = [{ kind: 'suppression', file: 'src/a.ts', line: 11, text: '// @ts-ignore' }, { kind: 'deleted-test', file: 'src/b.spec.ts', line: null, text: 'test file deleted' }];
+  assert.match(fixPrBody({ ...args, weakened }), /## Checks weakened\n\n- suppression: `src\/a\.ts:11` `\/\/ @ts-ignore`\n- deleted test: `src\/b\.spec\.ts` test file deleted\n\n## Risk/);
+  const feature = { goal: 'g', specRel: 's', trackingRef: null, tasks: '- t', files: [], tests: [], criteria: '- c', rulings: [], reviewFocus: '', footers: 'Plan: 000001' };
+  assert.doesNotMatch(featurePrBody(feature), /Checks weakened/);
+  assert.match(featurePrBody({ ...feature, weakened }), /## Checks weakened\n\n- suppression[\s\S]*\n\nPlan: 000001$/);
 });
 
 test('frontmatter parsing and editing', () => {
