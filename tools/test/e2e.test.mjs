@@ -220,7 +220,7 @@ test('web worktree: lefthook keeps the team hooks and adds the hub hooks', () =>
   const out = tool('plan.mjs', 'start', '000001', '--repo', 'web');
   assert.match(out, /hook self-test passed/);
   const wt = wtWeb();
-  write(join(wt, 'e2e/checkout.spec.ts'), "test('CHECKOUT-PAY-2: shows the decline reason', async () => {});\n");
+  write(join(wt, 'e2e/checkout.spec.ts'), "// eslint-disable-next-line no-empty-function\ntest('CHECKOUT-PAY-2: shows the decline reason', async () => {});\n");
   git(wt, 'add', '-A');
   gitFails(wt, 'commit', '-m', 'feat(checkout): decline message');
   git(wt, 'commit', '--quiet', '-m', 'feat(checkout): decline message', '--trailer', 'Task: 1', '--trailer', 'Refs: CHECKOUT-PAY-2',
@@ -265,6 +265,7 @@ test('review:start prepares a PR for review with its plan, rulings, criteria and
   assert.match(ctx, /`docs\/codebases\/web\/review\.md`: missing/);
   assert.match(ctx, /`docs\/patterns\/feature-folders\.md`: a pattern new code here follows \(Feature folders\)/);
   assert.match(readFileSync(join(hub, '.reviews/web-7/pr.diff'), 'utf8'), /\+test\('CHECKOUT-PAY-2/);
+  assert.match(ctx, /## Checks weakened\n\n- suppression: `e2e\/checkout\.spec\.ts:1` `\/\/ eslint-disable-next-line no-empty-function`/);
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'review notes are not hub documents');
   tool('review.mjs', 'cleanup', 'web', '7');
   assert.ok(!existsSync(wt));
@@ -278,6 +279,7 @@ test('plan:complete refuses before merge, then completes with rulings from foote
   const apiSha = squashMerge(apiBare, 'feat/000001-checkout-payments', 'feat(payments): checkout payments (#11)', 'Checkout by card.');
   const webPr = tool('plan.mjs', 'pr', '000001', '--repo', 'web');
   assert.match(webPr, /^Ruling: reused the generic error banner/m, 'plan:pr carries rulings into the squash body');
+  assert.match(webPr, /## Checks weakened\n\n- suppression: `e2e\/checkout\.spec\.ts:1`/, 'plan:pr lists weakened checks');
   // web merges with a merge commit, not a squash: the pointer must land on the merge commit.
   const webMergeDir = join(base, 'merge-web-mergecommit');
   git(base, 'clone', '--quiet', webBare, webMergeDir);
@@ -368,6 +370,13 @@ test('every check rule fails when its rule is broken', () => {
   assert.match(out, /\[ac\].*CHECKOUT-PAY-1 has no test/);
   git(api, 'checkout', '--quiet', '--detach', tip);
   assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/);
+  // A skipped test does not prove its criterion.
+  const spec = join(api, 'src/payments/payments.service.spec.ts');
+  const proven = readFileSync(spec, 'utf8');
+  writeFileSync(spec, proven.replace("it('CHECKOUT-PAY-1:", "it.skip('CHECKOUT-PAY-1:"));
+  assert.match(check(), /\[ac\].*CHECKOUT-PAY-1 is cited only by skipped tests/);
+  writeFileSync(spec, proven);
+  assert.match(run(hub, 'node', ['tools/docs-check.mjs']), /\[check\] ok/, 'the same test, not skipped, proves it');
 });
 
 test('plan:cleanup waits for the completion PR, then removes worktrees and branches', () => {
@@ -395,6 +404,11 @@ test('work:start gives bounded work a fresh worktree without plan footers', () =
   gitFails(wt, 'commit', '-m', 'round invoices');
   git(wt, 'commit', '--quiet', '-m', 'fix(billing): round invoice totals', '--trailer', 'Refs: BILL-ISSUE-1');
   assert.doesNotMatch(git(wt, 'log', '-1', '--format=%B'), /Plan:/);
+  assert.doesNotMatch(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /Checks weakened/, 'nothing weakened, no section');
+  write(join(wt, 'src/billing/billing.service.spec.ts'), "it.skip('BILL-ISSUE-1: issues an invoice', () => {});\n");
+  git(wt, 'commit', '--quiet', '-am', 'test(billing): park the invoice test');
+  assert.match(tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding'), /## Checks weakened\n\n- skipped test: `src\/billing\/billing\.service\.spec\.ts:1`/);
+  git(wt, 'reset', '--quiet', '--hard', 'HEAD~1');
   git(wt, 'reset', '--quiet', '--hard', 'HEAD~1');
   tool('plan.mjs', 'work-cleanup', 'api', 'fix/invoice-rounding');
   assert.ok(!existsSync(wt));

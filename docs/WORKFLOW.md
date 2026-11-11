@@ -123,7 +123,7 @@ It moves up to Bounded as soon as it changes behaviour a feature document descri
    ```
 
    Use `Cause:` for a bug and `Rationale:` for any other change; `Context:` and `Risk:` are optional.
-5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Risk, footers); with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
+5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Checks weakened when there are any, Risk, footers); with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
 6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR; add a new criterion before committing the code, because the commit hook only accepts `Refs:` IDs the hub defines). If structure changed, update the repository's architecture docs. Once the code PR is merged, that hub PR also moves the repository's submodule pointer to it with `pnpm repo:sync api` (it fetches, checks out the default branch, stages the pointer and refreshes the graph), so `pnpm check` sees the code the documents now describe. Bounded work that changes no document leaves the pointer alone; the next completion moves it.
 7. `pnpm work:cleanup api fix/login-redirect` removes the worktree and local branch.
 
@@ -161,7 +161,7 @@ sequenceDiagram
 3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
 4. **Spec PR.** `pnpm check`, commit `docs(spec): 000042 checkout-payments`, push, and open the PR with the title and body from `pnpm plan:pr 000042 --spec`. The body leads with the goal and the behaviour in plain language, so non-engineers can review it. Merge; from here `main` shows the work as approved.
 5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`. Their worktree step finds it is already in an isolated worktree and goes on to setup; dependencies are already installed with the repository's own package manager, so it skips its `npm install`.
-6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. Review, then squash merge.
+6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. When the branch weakens a check (a new suppression such as `@ts-ignore` or `eslint-disable`, a skipped or deleted test, fewer assertions in a test file, a lowered coverage threshold), the body lists it under **Checks weakened**, as does `work:pr`; it is a report for the reviewer, not a block. Review, then squash merge.
 7. **Complete.** When every repository's code PR is merged, `pnpm plan:complete 000042` creates `docs/000042-checkout-payments-completion`, ticks the plan checkboxes from the `Task:` footers, copies the agent's rulings from the `Ruling:` footers (and from the Superpowers ledger if a run left one), records the merge commits, moves the submodule pointers, moves the spec's acceptance criteria into the feature document named in its `## Links`, and sets the spec to `done`.
 8. **Completion PR.** The agent applies the spec's Documentation impact (it is printed by `plan:complete`) to the living documents and ticks each item; `pnpm check` refuses a done spec with an unticked item, and also names any structural file no architecture document covers. Commit `docs(completion): 000042 checkout-payments`, open the PR with `pnpm plan:pr 000042 --completion` (it lists the documentation updated), review, merge.
 9. **Clean up.** `pnpm plan:cleanup 000042` removes the worktrees and local branches once the completion PR is on `main`.
@@ -283,7 +283,7 @@ Plans come from `superpowers:writing-plans` unchanged, with the additions in `do
 - header lines `**Repo:**` and `**Branch:**`;
 - an `## Execution rules` section the executing agent must follow. With `superpowers:subagent-driven-development` that is the controller: each implementer subagent receives only its own `### Task N` section, so anything an implementer must do belongs in the task's steps;
 - every commit step written as `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" --trailer "Refs: <ids>"`, because the implementer subagent sees only its own task;
-- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`.
+- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`. A skipped or todo test (`.skip`, `.todo`, `.fixme`, `xit`, `xtest`, `xdescribe` on the title's line) proves nothing.
 
 Plans have no frontmatter. Their checkboxes stay unticked until `pnpm plan:complete` ticks them from git history; `pnpm check` rejects hand-ticked boxes. Progress during execution is shown by `pnpm plan:status`.
 
@@ -326,7 +326,7 @@ IDs are six digits, allocated only by `pnpm plan:new`, shared by the design spec
 
 From most to least durable:
 
-1. **Tests name acceptance criteria.** A test title starting with `CHECKOUT-PAY-2:` ties behaviour to its specification; `pnpm check` verifies the link in both directions.
+1. **Tests name acceptance criteria.** A test title starting with `CHECKOUT-PAY-2:` ties behaviour to its specification; `pnpm check` verifies the link in both directions, and does not count a skipped or todo test as proof.
 2. **Commit footers.** `git blame` gives the commit; its `Plan:` and `Refs:` footers give the plan, ADRs and criteria.
 3. **Rationale comments**, only where the code alone cannot explain a choice:
 
@@ -344,7 +344,7 @@ Ask the agent to "onboard <name>". Its `onboard-repository` skill runs `pnpm rep
 
 ## Reviewing pull requests
 
-Ask the agent to "help me review api#318". Its `review-pull-request` skill runs `pnpm review:start api 318`, which checks out the PR's head in `.worktrees/api--review-318` (so line numbers match the code under review), saves the diff, refreshes the graph and writes `.reviews/api-318/context.md` with what the hub knows about the change: the spec, plan, Review Focus, rulings and criterion coverage for planned work (found from the commits' `Plan:` footers or the branch name), the fixed issue for a bug fix in GitHub mode, and the architecture documents, contracts, ADRs and team guidelines that govern the changed files.
+Ask the agent to "help me review api#318". Its `review-pull-request` skill runs `pnpm review:start api 318`, which checks out the PR's head in `.worktrees/api--review-318` (so line numbers match the code under review), saves the diff, refreshes the graph and writes `.reviews/api-318/context.md` with what the hub knows about the change: the spec, plan, Review Focus, rulings and criterion coverage for planned work (found from the commits' `Plan:` footers or the branch name), the fixed issue for a bug fix in GitHub mode, the architecture documents, contracts, ADRs and team guidelines that govern the changed files, and the checks the diff weakens.
 
 The skill reviews through the lenses you choose and drafts each comment in two parts: a short one to paste for the author, and the evidence you need to defend it. It writes to `.reviews/api-318/review.md` and never posts, approves or pushes. `pnpm review:cleanup api 318` removes the worktree and keeps the notes. Team guidelines are listed per repository in `hub.config.json` as `reviewGuidelines` (hub-relative paths). The full guide for reviewers is `docs/PR_REVIEW.md`.
 

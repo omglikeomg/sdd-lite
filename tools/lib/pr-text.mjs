@@ -45,7 +45,13 @@ function verification(tests, extra) {
   return parts.join('\n\n') || 'No tests were added or changed; say how this was verified.';
 }
 
-export function fixPrBody({ issue, commits, files, tests, sections, refs, fixesRef }) {
+// Checks a change weakens (`weakenedChecks` in floor.mjs), one line each; empty when there are none.
+const WEAKENED_LABEL = { suppression: 'suppression', 'skipped-test': 'skipped test', 'deleted-test': 'deleted test', 'removed-assertions': 'removed assertions', 'lowered-threshold': 'lowered threshold' };
+export function weakenedList(weakened = []) {
+  return weakened.map((w) => `- ${WEAKENED_LABEL[w.kind]}: \`${w.file}${w.line ? `:${w.line}` : ''}\` ${w.line ? `\`${w.text}\`` : w.text}`).join('\n');
+}
+
+export function fixPrBody({ issue, commits, files, tests, sections, refs, fixesRef, weakened }) {
   const context = [
     issue ? `Reported in ${issue.ref}${issue.title ? `: **${issue.title}**` : ''}.` : '',
     sections.context,
@@ -59,13 +65,14 @@ export function fixPrBody({ issue, commits, files, tests, sections, refs, fixesR
   out.push(commits.map((c) => `- ${c.subject}`).join('\n'));
   if (files.length) out.push('', fileList(files));
   out.push('', '## How it was verified', '', verification(tests, sections.verification));
+  if (weakened?.length) out.push('', '## Checks weakened', '', weakenedList(weakened));
   if (sections.risk) out.push('', '## Risk', '', sections.risk);
   const footers = [fixesRef ? `Fixes ${fixesRef}` : '', refs.length ? `Refs: ${refs.join(', ')}` : ''].filter(Boolean);
   if (footers.length) out.push('', footers.join('\n'));
   return out.join('\n');
 }
 
-export function featurePrBody({ goal, specRel, trackingRef, tasks, files, tests, criteria, rulings, reviewFocus, footers }) {
+export function featurePrBody({ goal, specRel, trackingRef, tasks, files, tests, criteria, rulings, reviewFocus, footers, weakened }) {
   const out = ['## Context', '', goal, '', `Design: \`${specRel}\` in the hub${trackingRef ? ` · tracking issue ${trackingRef}` : ''}.`];
   out.push('', '## What changed', '', tasks);
   if (files.length) out.push('', fileList(files));
@@ -73,6 +80,7 @@ export function featurePrBody({ goal, specRel, trackingRef, tasks, files, tests,
   out.push('', '## Decisions made during implementation', '', rulings.length ? rulings.map((r) => `- ${r}`).join('\n') : '- None: the plan was followed as written.');
   if (reviewFocus) out.push('', '## Review focus', '', reviewFocus);
   out.push('', '## How it was verified', '', verification(tests, tests.length ? 'Tests that prove an acceptance criterion are titled with its ID.' : ''));
+  if (weakened?.length) out.push('', '## Checks weakened', '', weakenedList(weakened));
   out.push('', footers);
   return out.join('\n');
 }

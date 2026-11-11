@@ -12,6 +12,7 @@ import { parsePlan, tickTasks, rulingsFromLedger, completionSection } from './li
 import { copyLefthookLocal, hookSelfTest } from './lib/hooks.mjs';
 import { criteriaByFeature, mergeCriteria, newFeatureDoc, splitCriteria, removeCriteria } from './lib/features.mjs';
 import { explanationSections, fixPrBody, featurePrBody } from './lib/pr-text.mjs';
+import { weakenedChecks } from './lib/floor.mjs';
 import { matchesAny } from './lib/glob.mjs';
 import {
   STATUS, requireGh, parseIssueRef, openPrFor, closeIssue, closePr, removeLabels, addSubIssue, ensureLabels, epicLabel, createIssue, viewIssue, comment, addLabels, setStatus, createPr, editIssueBody as gh_editBody,
@@ -477,14 +478,18 @@ function cmdWorkStart(args) {
 
 const FOOTER_KEYS = /^(Plan|Task|Refs|Ruling|Co-Authored-By|Signed-off-by|Fixes|Closes):/i;
 
-// Files a branch changes relative to the default branch, and which of them are tests.
+// Files a branch changes relative to the default branch, which of them are tests, and the checks
+// the branch weakens.
 function branchFiles(repo, repoDir, defaultRef, branch) {
-  const out = gitTry(repoDir, ['diff', '--name-status', `${defaultRef}...refs/heads/${branch}`]).out;
+  const range = `${defaultRef}...refs/heads/${branch}`;
+  const out = gitTry(repoDir, ['diff', '--name-status', range]).out;
   const files = out.split('\n').filter(Boolean).map((l) => {
     const parts = l.split('\t');
     return { status: parts[0], path: parts[parts.length - 1] };
   });
-  return { files, tests: files.filter((f) => f.status[0] !== 'D' && matchesAny(f.path, repo.tests)).map((f) => f.path) };
+  const isTest = (f) => matchesAny(f, repo.tests);
+  const weakened = weakenedChecks(gitTry(repoDir, ['diff', '--no-color', '-U0', range]).out, isTest);
+  return { files, tests: files.filter((f) => f.status[0] !== 'D' && isTest(f.path)).map((f) => f.path), weakened };
 }
 
 function cmdWorkPr(args) {
@@ -505,9 +510,9 @@ function cmdWorkPr(args) {
   const title = commits.length === 1 && !commitHeaderError(commits[0].subject) ? commits[0].subject : `${type}: ${slug.replace(/-/g, ' ')}`;
   const sections = explanationSections(commits.map((c) => c.body.split('\n').slice(1).filter((l) => !FOOTER_KEYS.test(l)).join('\n')));
   const refs = [...new Set(commits.flatMap((c) => footerValues(c.body, 'Refs').flatMap((v) => v.split(/[,\s]+/).filter(Boolean))))];
-  const { files, tests } = branchFiles(repo, repoDir, defaultRef, branch);
+  const { files, tests, weakened } = branchFiles(repo, repoDir, defaultRef, branch);
   const fixesRef = issue ? `${issue.repo === repo.github ? '' : issue.repo}#${issue.number}` : null;
-  const body = fixPrBody({ issue: issue && { ref: `${issue.repo}#${issue.number}`, title: issue.title }, commits, files, tests, sections, refs, fixesRef });
+  const body = fixPrBody({ issue: issue && { ref: `${issue.repo}#${issue.number}`, title: issue.title }, commits, files, tests, sections, refs, fixesRef, weakened });
   const summary = [
     sections.cause && `**Root cause:** ${sections.cause}`,
     sections.rationale && `**Rationale:** ${sections.rationale}`,
@@ -707,7 +712,7 @@ ${(() => { const i = section(specText, 'Documentation impact'); return i && i.te
   const taskList = plan.tasks.map((t) => `- [${done.has(t.number) ? 'x' : ' '}] Task ${t.number}: ${t.title}`).join('\n');
   const title = `${b.type}${values.scope ? `(${values.scope})` : ''}: ${slug.replace(/-/g, ' ')}`;
   const defaultRefPr = refExists(repoDir, `origin/${repo.defaultBranch}`) ? `origin/${repo.defaultBranch}` : repo.defaultBranch;
-  const { files, tests } = branchFiles(repo, repoDir, defaultRefPr, plan.branch);
+  const { files, tests, weakened } = branchFiles(repo, repoDir, defaultRefPr, plan.branch);
   const focus = section(planText, 'Review Focus');
   const body = featurePrBody({
     goal: planGoal,
@@ -719,6 +724,7 @@ ${(() => { const i = section(specText, 'Documentation impact'); return i && i.te
     criteria: covered.length ? covered.map((c) => c.lines.join('\n')).join('\n') : '- None in this repository.',
     rulings,
     reviewFocus: focus && focus.text.trim(),
+    weakened,
     footers: `Plan: ${id}\nTask: ${doneList.join(', ') || 'none yet'}${rulings.map((r) => `\nRuling: ${r}`).join('')}`,
   });
   printPr(title, body);
