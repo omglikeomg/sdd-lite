@@ -38,7 +38,7 @@ sequenceDiagram
 | Epic design ready | `pnpm epic:pr <slug> --create` | Epic PR labelled `epic:<slug>`; "Epic design ready for review" comment with outcome and phases |
 | A phase of an epic starts | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Its tracking issue becomes a **sub-issue** of the epic's issue; every PR of the phase (hub and product) carries `epic:<epic>` |
 | A bug is picked up | `pnpm work:start <repo> fix/<slug> --issue <n>` | The issue and its comments are saved as context for the agent; `tier:bounded`, `status:ongoing`; "Work started" comment |
-| The fix is ready | `pnpm work:pr <repo> fix/<slug> --create` | PR with Context, Root cause, What changed, How it was verified and `Fixes <issue>`; "Fix ready for review" comment explaining cause and fix |
+| The fix is ready | `pnpm work:pr <repo> fix/<slug> --create` | PR with Context, Root cause, What changed, How it was verified and `Fixes <issue>`; "Fix ready for review" comment explaining cause and fix; on an issue in the hub repository, `breaking-change` if a commit header has `!` |
 | Planned work stops | `pnpm plan:abandon <id> --reason "…"` | Open spec and code PRs closed with the reason; "Abandoned" comment; issue closed as *not planned* |
 
 Every `--create` pushes the branch and opens the PR. Agents must ask before running it, the same as for any push.

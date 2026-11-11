@@ -108,7 +108,7 @@ It moves up to Bounded as soon as it changes behaviour a feature document descri
 
 1. Graph preflight (see below), scaled down: one or two queries.
 2. Brainstorming treats it as a small change: a short design, approved by a person before anything starts. In the hub that design stays in chat and later in the commit's paragraphs (step 4), with no spec file and no plan; `work:start` takes the place of writing-plans.
-3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
+3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD; a bug fix starts with Prove-It: a test that fails because of the bug, before any fix. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
 4. Commit with a body made of labelled paragraphs, which `work:pr` turns into the PR's sections:
 
    ```
@@ -289,7 +289,7 @@ Plans come from `superpowers:writing-plans` unchanged, with the additions in `do
 - header lines `**Repo:**` and `**Branch:**`;
 - an `## Execution rules` section the executing agent must follow. With `superpowers:subagent-driven-development` that is the controller: each implementer subagent receives only its own `### Task N` section, so anything an implementer must do belongs in the task's steps;
 - every commit step written as `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" --trailer "Refs: <ids>"`, because the implementer subagent sees only its own task;
-- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`. A skipped or todo test (`.skip`, `.todo`, `.fixme`, `xit`, `xtest`, `xdescribe` on the title's line) proves nothing.
+- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`. A skipped or todo test (`.skip`, `.todo`, `.fixme`, `xit`, `xtest`, `xdescribe` on the title's line) proves nothing (Beyoncé Rule: if you rely on it, put a test on it).
 
 Plans have no frontmatter. Their checkboxes stay unticked until `pnpm plan:complete` ticks them from git history; `pnpm check` rejects hand-ticked boxes. Progress during execution is shown by `pnpm plan:status`.
 
@@ -358,7 +358,7 @@ The skill reviews through the lenses you choose and drafts each comment in two p
 
 `docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked `path::Symbol` citations. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
 
-Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (removing or retyping anything a consumer uses) needs an ADR and a release plan for both sides.
+Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (changing any behaviour a consumer can observe and rely on: fields, error text, ordering, timing) needs an ADR and a release plan for both sides.
 
 ## Patterns
 

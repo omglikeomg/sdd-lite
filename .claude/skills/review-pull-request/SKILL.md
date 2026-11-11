@@ -41,10 +41,10 @@ Create a todo for each item and complete them in order.
 | Lens | When | Asks |
 |---|---|---|
 | **Intent** | Always | Planned work: does the PR deliver its tasks and the spec's criteria, every Review Focus item, and nothing the spec did not ask for? Are the rulings acceptable, or should one change the spec instead? Bounded work: does it fix what the issue describes, at the cause? Neither: does it do what its description says? |
-| **Proof** | Always | Is every criterion this PR implements proven by a test titled with its ID? Is any test citing an ID the hub does not define, or one the spec retires? Do the tests fail without the change? |
+| **Proof** | Always | Is every criterion this PR implements proven by a test titled with its ID? Is any test citing an ID the hub does not define, or one the spec retires? Do the tests fail without the change? Does behaviour the change relies on have a test (Beyoncé Rule: if you rely on it, put a test on it)? |
 | **Architecture** | Always | Does the change respect the repository map's invariants, the covering areas and the cited ADRs? Does it reuse what exists (step 4) or rebuild it? Does a structural change need the map updated? |
 | **Patterns** | The map or a covering area cites a pattern | Does new code follow each cited pattern's rules? Does a change to a known deviation make it worse, or bring it in line? |
-| **Contracts** | The repository provides or consumes a contract | Does it break a consumer (removed or retyped fields, changed errors) or rely on behaviour the provider does not promise? A breaking change needs an ADR. |
+| **Contracts** | The repository provides or consumes a contract | Does it change anything a consumer can observe (Hyrum's Law: every observable behaviour gets relied on, promised or not), such as fields, error text, ordering or timing, or rely on behaviour the provider does not promise? Does it add a second version where extending the one would do (One-Version Rule: one version at a time)? A breaking change needs an ADR. |
 | **Risk** | Always | `risk-checklist.md` in this skill's folder. |
 | **Team guideline** | One lens per listed guideline | The guideline's own rules. |
 
