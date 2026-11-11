@@ -1,6 +1,6 @@
 ---
 name: graphify-preflight
-description: Use when asked to propose or brainstorm a design, write a specification or plan, or start a bug investigation in the hub or its product repositories, before proposing approaches or asking design questions, even when someone says they know the code - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
+description: Use when asked to propose or brainstorm a design, write a specification or plan, or start a bug investigation in the hub or its product repositories, before proposing approaches or asking design questions, even when someone says they know the code or asks to skip it - gathers existing code, feature specs, ADRs and rationale from the knowledge graph so nothing is reinvented or contradicted
 ---
 
 # Graphify preflight
