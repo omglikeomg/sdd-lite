@@ -147,6 +147,7 @@ sequenceDiagram
   A->>H: graphify-preflight, brainstorming, design spec with Documentation impact
   P->>A: approve the spec
   A->>H: writing-plans: one plan per repository
+  P->>A: approve the task list
   P->>H: spec PR (title and body from pnpm plan:pr --spec), review, merge
   P->>R: pnpm plan:start 000042 --repo api
   R-->>A: worktree on feat/000042-checkout-payments from fresh main
@@ -164,7 +165,7 @@ sequenceDiagram
 
 1. **Allocate.** `pnpm plan:new checkout-payments --repos api,web` fetches the hub, allocates the next ID, creates the branch `docs/000042-checkout-payments-spec` and prints the exact spec and plan paths.
 2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path, which replaces its date-based default name. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. A person approves it; set `status: approved`.
-3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
+3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. Then the agent shows each plan's task list (title, `Blocked by:` and test seam per task) and waits for a person to approve it; that takes the place of writing-plans' request to review the plan. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
 4. **Spec PR.** `pnpm check`, commit `docs(spec): 000042 checkout-payments`, push, and open the PR with the title and body from `pnpm plan:pr 000042 --spec`. The body leads with the goal and the behaviour in plain language, so non-engineers can review it. Merge; from here `main` shows the work as approved.
 5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`. Their worktree step finds it is already in an isolated worktree and goes on to setup; dependencies are already installed with the repository's own package manager, so it skips its `npm install`.
 6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. When the branch weakens a check (a new suppression such as `@ts-ignore` or `eslint-disable`, a skipped or deleted test, fewer assertions in a test file, a lowered coverage threshold), the body lists it under **Checks weakened** (`work:pr` lists it under the blast radius); it is a report for the reviewer, not a block. Review, then squash merge.
@@ -287,6 +288,7 @@ Spikes follow Superpowers (answer first, throwaway code); write a spike note onl
 Plans come from `superpowers:writing-plans` unchanged, with the additions in `docs/templates/PLAN-ADDENDUM.md`:
 
 - header lines `**Repo:**` and `**Branch:**`;
+- tasks that are vertical slices (tracer bullets), each with a `**Blocked by:**` line naming `None` or earlier tasks of the same plan, ordered prefactor first, contract first across repositories, riskiest first; wide refactors go expand–contract. `pnpm check` enforces the line; a person approves the task list before the spec PR;
 - an `## Execution rules` section the executing agent must follow. With `superpowers:subagent-driven-development` that is the controller: each implementer subagent receives only its own `### Task N` section, so anything an implementer must do belongs in the task's steps;
 - every commit step written as `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" --trailer "Refs: <ids>"`, because the implementer subagent sees only its own task;
 - every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`. A skipped or todo test (`.skip`, `.todo`, `.fixme`, `xit`, `xtest`, `xdescribe` on the title's line) proves nothing (Beyoncé Rule: if you rely on it, put a test on it).

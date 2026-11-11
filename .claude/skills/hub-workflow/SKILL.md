@@ -29,6 +29,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | Start a phase of an epic | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Link the epic in the spec's `## Links`; criteria name their `REQ-n` |
 | Start **trivial** or **bounded** work | `pnpm work:start <repo> <type>/<slug> [--issue <n>]` | Work in the printed worktree; with `--issue`, read the saved issue context first |
 | Start **architectural** work | `pnpm plan:new <slug> --repos <a,b> [--issue <n>] [--epic <slug>]` | Save the spec and plans at the printed paths; decline writing-plans' offer to execute |
+| Approve a plan's tasks, once writing-plans saved it | Show each plan's task list, one line per task: its title, its `Blocked by:` and its test seam (the task's `Test:` file and the test that proves it) | Wait for your human partner's approval before the spec PR. The list replaces writing-plans' request to review the whole plan |
 | Open the spec PR | `pnpm check`, commit `docs(spec): <id> <slug>`, `pnpm plan:pr <id> --spec [--create]` | Ask your human partner before `--create` or any push |
 | Execute an approved plan | `pnpm plan:start <id> --repo <name>` | Start the session in the printed worktree |
 | Commit a plan task | `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" [--trailer "Refs: <ids>"] [--trailer "Ruling: <decision> — <why> — <cost>"]` | One commit per task; hooks add `Plan:`; every deviation from the plan and every parked review finding is a `Ruling:` footer |
@@ -59,6 +60,7 @@ The rules behind each command are in `docs/WORKFLOW.md`. Superpowers skills stil
 | Thought | Reality |
 |---|---|
 | "It's faster to `git switch -c` myself" | Hand-made branches skip the fresh fetch and the hook self-test. Use `work:start` or `plan:start`. |
+| "They're busy, I'll skip the task list and open the spec PR" | The list is the plan in one line per task, quick to approve. Show it and wait; the spec PR comes after the approval. |
 | "I'll tick the boxes so the plan looks current" | `pnpm check` rejects hand-ticked boxes. `plan:status` shows progress. |
 | "I'll write the PR description myself" | `plan:pr` and `work:pr` carry the footers the squash commit needs and post the issue comment. Edit the text if needed; keep the footers. |
 | "I'll just move the label to pending review" | Labels follow the commands; a hand-set label is overwritten at the next step. Run the step's command. |

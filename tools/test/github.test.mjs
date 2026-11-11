@@ -162,6 +162,8 @@ Billing lives in \`repos/api/src/billing/billing.module.ts\`.
 
 ### Task 1: Charge a saved card
 
+**Blocked by:** None
+
 - [ ] **Step 1: Write the failing test**
 - [ ] **Step 2: Commit**
 `);
@@ -312,7 +314,7 @@ test('epics in GitHub mode: adopted issue, design PR, phases as sub-issues, epic
 
   const id = String(phaseNo).padStart(6, '0');
   write(join(hub, `docs/superpowers/specs/${id}-saved-addresses-design.md`), `---\ntype: design\nstatus: approved\n---\n# Saved addresses\n\n## Goal\n\nReuse the last address.\n\n## Acceptance criteria\n\n- **ADDR-1** When a returning customer checks out, the system shall offer their last address. (REQ-1)\n\n## Documentation impact\n\n- None: no living document changes.\n\n## Links\n\n- Epic: [faster-checkout](../../epics/faster-checkout/README.md)\n- Feature: \`docs/features/addresses.md\`\n`);
-  write(join(hub, `docs/superpowers/plans/${id}-saved-addresses--api.md`), `# Saved addresses (api) Implementation Plan\n\n**Goal:** Offer the last address.\n\n**Spec:** [design](../specs/${id}-saved-addresses-design.md)\n\n**Repo:** \`repos/api\`\n\n**Branch:** \`feat/${id}-saved-addresses\`\n\n---\n\n### Task 1: Last address\n\n- [ ] **Step 1: Test**\n`);
+  write(join(hub, `docs/superpowers/plans/${id}-saved-addresses--api.md`), `# Saved addresses (api) Implementation Plan\n\n**Goal:** Offer the last address.\n\n**Spec:** [design](../specs/${id}-saved-addresses-design.md)\n\n**Repo:** \`repos/api\`\n\n**Branch:** \`feat/${id}-saved-addresses\`\n\n---\n\n### Task 1: Last address\n\n**Blocked by:** None\n\n- [ ] **Step 1: Test**\n`);
   git(hub, 'add', '-A');
   git(hub, 'commit', '--quiet', '-m', `docs(spec): ${id} saved-addresses`);
   tool('plan.mjs', 'pr', id, '--spec', '--create');

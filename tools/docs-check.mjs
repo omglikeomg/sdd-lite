@@ -10,7 +10,7 @@ import {
   SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, testTitleCriteria,
   parsePlanBranch, specPath, SLUG_RE, REQ_DEFINITION_RE, REQ_REF_RE,
 } from './lib/conventions.mjs';
-import { parsePlan } from './lib/plans.mjs';
+import { parsePlan, blockedByError } from './lib/plans.mjs';
 import { matchesAny, globToRegExp } from './lib/glob.mjs';
 import { gitTry, lsFiles } from './lib/git.mjs';
 
@@ -283,6 +283,8 @@ function checkPlan(root, p, text, repo, err) {
   plan.tasks.forEach((t, i) => {
     if (t.number !== i + 1) err(p.file, t.line, 'plans', `tasks must be numbered 1..N in order; found Task ${t.number} at position ${i + 1}`);
     if (t.checkboxes.length === 0) err(p.file, t.line, 'plans', `Task ${t.number} has no "- [ ]" steps`);
+    const blocked = blockedByError(t);
+    if (blocked) err(p.file, t.blockedBy ? t.blockedBy.line : t.line, 'plans', blocked);
   });
   for (const t of plan.tasks) {
     const shouldBeChecked = !!plan.completion && !plan.deferred.has(t.number);

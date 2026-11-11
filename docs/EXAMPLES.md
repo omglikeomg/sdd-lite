@@ -267,10 +267,22 @@ No ADR: the endpoint is additive and stays inside the notes module. The agent sa
 
 > **Lucía:** Approved.
 
-The agent sets `status: approved` and runs `superpowers:writing-plans`: a three-task plan for `api` (command and handler, validation and the 200 cap, controller and contract types) and a two-task plan for `web` (selection state and toolbar, the API call and in-place refresh). Every commit step carries its footers:
+The agent sets `status: approved` and runs `superpowers:writing-plans`: a three-task plan for `api` and a two-task plan for `web`. Each task is a vertical slice with a `**Blocked by:**` line. The api plan produces the contract, so it opens with the endpoint and its contract types; web builds against the contract the spec fixes. Before the spec PR the agent shows Lucía the task lists:
+
+| Plan | Task | Blocked by | Test seam |
+|---|---|---|---|
+| api | 1. Bulk endpoint and contract types | None | `notes.controller.spec.ts`: NOTES-BULK-3, 201 IDs get a 400 |
+| api | 2. Apply a bulk change in one transaction | Task 1 | `bulk-update-notes.handler.spec.ts`: NOTES-BULK-1 |
+| api | 3. All or nothing when a note fails | Task 2 | `bulk-update-notes.handler.spec.ts`: NOTES-BULK-2 |
+| web | 1. Select notes and apply an action | None | `notes-page.test.tsx`: NOTES-BULK-4, one request, result in place |
+| web | 2. Lock the list while a change is in flight | Task 1 | `notes-page.test.tsx`: NOTES-BULK-5 |
+
+> **Lucía:** Approved.
+
+Every commit step carries its footers:
 
 ```bash
-git commit -m "feat(notes): bulk update handler" --trailer "Task: 1" --trailer "Refs: NOTES-BULK-1, NOTES-BULK-2"
+git commit -m "feat(notes): apply bulk changes in one transaction" --trailer "Task: 2" --trailer "Refs: NOTES-BULK-1"
 ```
 
 ### 3. The spec PR

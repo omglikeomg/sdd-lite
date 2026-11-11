@@ -89,7 +89,7 @@ const PLAN = (repo, branch, tasks) => `# Checkout payments (${repo}) Implementat
 
 ---
 
-${tasks.map((t, i) => `### Task ${i + 1}: ${t}\n\n- [ ] **Step 1: Write the failing test**\n- [ ] **Step 2: Implement**\n- [ ] **Step 3: Commit**\n`).join('\n')}`;
+${tasks.map((t, i) => `### Task ${i + 1}: ${t}\n\n**Blocked by:** ${i ? `Task ${i}` : 'None'}\n\n- [ ] **Step 1: Write the failing test**\n- [ ] **Step 2: Implement**\n- [ ] **Step 3: Commit**\n`).join('\n')}`;
 
 let apiBare;
 let webBare;
@@ -304,6 +304,7 @@ test('plan:complete refuses before merge, then completes with rulings from foote
   assert.equal(git(hub, 'branch', '--show-current').trim(), 'docs/000001-checkout-payments-completion');
   const apiPlan = readFileSync(join(hub, 'docs/superpowers/plans/000001-checkout-payments--api.md'), 'utf8');
   assert.doesNotMatch(apiPlan.split('## Execution rules')[1], /- \[ \] \*\*Step/);
+  assert.match(apiPlan, /### Task 2: [^\n]*\n\n\*\*Blocked by:\*\* Task 1\n\n- \[x\] \*\*Step 1/, 'Blocked by lines survive ticking');
   assert.match(apiPlan, /- kept a single charge method/, "ruling from an unfinished run's ledger");
   assert.match(apiPlan, new RegExp(`\\*\\*Merged:\\*\\* \`repos/api@${apiSha.slice(0, 12)}\``));
   assert.match(readFileSync(join(hub, 'docs/superpowers/plans/000001-checkout-payments--web.md'), 'utf8'), /- reused the generic error banner/,
@@ -339,6 +340,7 @@ test('every check rule fails when its rule is broken', () => {
   const map = join(hub, 'docs/codebases/api/ARCHITECTURE.md');
   const breakages = [
     ['progress', apiPlan, (t) => t.replace('- [x]', '- [ ]')],
+    ['plans', apiPlan, (t) => t.replace('**Blocked by:** None', '**Blocked by:** Task 2')],
     ['links', feature, (t) => `${t}\nSee [missing](missing.md).\n`],
     ['adr-refs', feature, (t) => `${t}\nAs decided in ADR-0998.\n`],
     ['ac', feature, (t) => `${t}\n- **CHECKOUT-PAY-9** The system shall refund within a day.\n`],
