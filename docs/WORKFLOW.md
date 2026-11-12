@@ -52,6 +52,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 | `plan:start`, then open a new agent session in the worktree it prints | You: an agent can run `plan:start`, but it cannot move its own session into the worktree |
 | Review an onboarding PR (architecture map drafted by the agent) | You, for what code cannot show: intent, owners, deployment |
 | Review a teammate's PR | You: the agent prepares it and drafts comments (`review-pull-request` skill); you decide and post |
+| Retro of recent hub work | You: the agent proposes hub changes from rulings, review findings, check failures and abandon reasons (`hub-retro` skill), each with its evidence and tier, preferring a check over a written rule; you pick which start, each through its tier |
 
 ### Who sets each status
 

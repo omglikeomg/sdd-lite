@@ -1,0 +1,14 @@
+{
+  "positive": [
+    "Let's do a retro of the hub: what should we change after the last month of work?",
+    "Look back over recent rulings and abandoned plans and propose improvements to the hub's checks and rules",
+    "The same check keeps failing on every PR; what should the hub change so it stops happening?",
+    "Run a retrospective on our recent hub work and suggest new checks, templates or skill changes"
+  ],
+  "negative": [
+    { "prompt": "Why did that superpowers session take so long and keep redoing the same work?", "owner": "superpowers:diagnosing-superpowers" },
+    { "prompt": "A superpowers skill didn't fire in my last session, help me build a bug report for the maintainers", "owner": "superpowers:diagnosing-superpowers" },
+    { "prompt": "Help me review api#318, the teammate's pull request", "owner": "review-pull-request" },
+    { "prompt": "Start the bounded fix for the timeout bug in the api", "owner": "hub-workflow" }
+  ]
+}
