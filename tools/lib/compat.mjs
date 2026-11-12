@@ -1,18 +1,18 @@
 // What the hub relies on in Graphify and Superpowers, and the versions it was last verified with.
-// `pnpm doctor` compares versions and checks the Superpowers texts; tools/test/compat.test.mjs
+// `pnpm hub:doctor` compares versions and checks the Superpowers texts; tools/test/compat.test.mjs
 // also runs the real Graphify. docs/WORKFLOW.md ("Tested with") is the human-readable copy.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const TESTED = { graphify: '0.9.82', superpowers: '6.4.1' };
+export const TESTED = { graphify: '0.9.82', superpowers: '7.0.2' };
 
 // Texts in the installed Superpowers that the hub's rules depend on. If one disappears, the rule
 // that names it needs a fresh look.
 export const SUPERPOWERS_TEXTS = [
-  { file: 'skills/brainstorming/SKILL.md', text: 'Explore project context', why: 'the graphify-preflight skill is this step of brainstorming' },
-  { file: 'skills/brainstorming/SKILL.md', text: 'no plan document', why: 'bounded work follows brainstorming\'s bounded path, which writes no spec or plan' },
-  { file: 'skills/brainstorming/SKILL.md', text: 'User preferences for spec location override this default', why: 'the spec path printed by plan:new replaces the date-based name' },
+  { file: 'skills/brainstorming/SKILL.md', text: 'Your First Message', why: 'the graphify-preflight skill runs before brainstorming\'s first message' },
+  { file: 'skills/brainstorming/SKILL.md', text: 'A small change', why: 'bounded work is brainstorming\'s small change, approved in chat, with no spec file and no plan' },
+  { file: 'skills/brainstorming/SKILL.md', text: 'preferences override both', why: 'the spec path printed by plan:new replaces the date-based name' },
   { file: 'skills/writing-plans/SKILL.md', text: 'User preferences for plan location override this default', why: 'the plan paths printed by plan:new replace the date-based names' },
   { file: 'skills/using-git-worktrees/SKILL.md', text: 'git-common-dir', why: 'it recognises the worktrees plan:start and work:start create as already isolated' },
   { file: 'skills/finishing-a-development-branch/SKILL.md', text: 'Push and create a Pull Request', why: 'agents finish planned and bounded work with this option' },

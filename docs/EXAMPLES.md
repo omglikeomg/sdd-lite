@@ -45,7 +45,7 @@ Lucía clones the hub and sets it up (`docs/ONBOARDING.md` has the details):
 
 ```bash
 git clone --recurse-submodules git@github.com:acme/notes-hub.git && cd notes-hub
-pnpm hub:setup && pnpm doctor
+pnpm hub:setup && pnpm hub:doctor
 ```
 
 The repositories were onboarded by asking the agent:
@@ -124,7 +124,8 @@ became undefined and Prisma wrote them as NULL.
 Fix: the command carries only the fields present in the request, and
 Note.update() changes only those.
 Verification: NOTES-EDIT-3 covers a title-only PATCH; the full suite passes.
-Risk: none for clients that send full objects; they behave as before.
+Door: two-way; no schema change, reverting the squash restores the old update.
+Blast radius: clients that send partial objects; those sending full objects behave as before.
 
 Refs: NOTES-EDIT-3
 ```
@@ -162,8 +163,10 @@ NOTES-EDIT-3 covers a title-only PATCH; the full suite passes.
 Tests added or changed:
 - `apps/api/src/notes/application/commands/update-note/update-note.handler.spec.ts`
 
-## Risk
-None for clients that send full objects; they behave as before.
+## Merge danger
+**Door:** 🔄 two-way; no schema change, reverting the squash restores the old update.
+
+**Blast radius:** clients that send partial objects; those sending full objects behave as before.
 
 Fixes acme/notes-hub#12
 Refs: NOTES-EDIT-3
@@ -264,10 +267,22 @@ No ADR: the endpoint is additive and stays inside the notes module. The agent sa
 
 > **Lucía:** Approved.
 
-The agent sets `status: approved` and runs `superpowers:writing-plans`: a three-task plan for `api` (command and handler, validation and the 200 cap, controller and contract types) and a two-task plan for `web` (selection state and toolbar, the API call and in-place refresh). Every commit step carries its footers:
+The agent sets `status: approved` and runs `superpowers:writing-plans`: a three-task plan for `api` and a two-task plan for `web`. Each task is a vertical slice with a `**Blocked by:**` line. The api plan produces the contract, so it opens with the endpoint and its contract types; web builds against the contract the spec fixes. Before the spec PR the agent shows Lucía the task lists:
+
+| Plan | Task | Blocked by | Test seam |
+|---|---|---|---|
+| api | 1. Bulk endpoint and contract types | None | `notes.controller.spec.ts`: NOTES-BULK-3, 201 IDs get a 400 |
+| api | 2. Apply a bulk change in one transaction | Task 1 | `bulk-update-notes.handler.spec.ts`: NOTES-BULK-1 |
+| api | 3. All or nothing when a note fails | Task 2 | `bulk-update-notes.handler.spec.ts`: NOTES-BULK-2 |
+| web | 1. Select notes and apply an action | None | `notes-page.test.tsx`: NOTES-BULK-4, one request, result in place |
+| web | 2. Lock the list while a change is in flight | Task 1 | `notes-page.test.tsx`: NOTES-BULK-5 |
+
+> **Lucía:** Approved.
+
+Every commit step carries its footers:
 
 ```bash
-git commit -m "feat(notes): bulk update handler" --trailer "Task: 1" --trailer "Refs: NOTES-BULK-1, NOTES-BULK-2"
+git commit -m "feat(notes): apply bulk changes in one transaction" --trailer "Task: 2" --trailer "Refs: NOTES-BULK-1"
 ```
 
 ### 3. The spec PR
@@ -430,11 +445,11 @@ $ pnpm epic:new users-and-login --prd ~/Downloads/accounts-prd.md --issue 30
 
 #30 gets `tier:epic`, `epic:users-and-login`, `status:ongoing` and "Epic design started". The agent runs the preflight over notes, auth and the web app's routes, then numbers Irene's requirements in `prd.md` without changing her words: **REQ-1** sign up with email and password, **REQ-2** sign in and out, **REQ-3** each user sees only their notes, **REQ-4** existing notes are not lost, **REQ-5** stay signed in for a while, **REQ-6** reset a forgotten password.
 
-### 2. Three rounds of questions
+### 2. Rounds of questions
 
-Each round is one message, up to five questions, each with the agent's recommended answer.
+Each round is one message, up to five questions, each with the agent's recommended answer. A round asks only what Lucía can answer now; a question whose answer depends on one still open waits for a later round, whatever its theme.
 
-**Round 1, the requirements.** Excerpts:
+**Round 1.** The five most important questions nothing else blocks. Excerpts:
 
 > 1. **REQ-4: who owns the notes that exist today?** There is no user to give them to. *I recommend* a one-off "claim" step: the first account created with the operator's email gets all existing notes; everyone else starts empty. Irene should confirm, because the alternative (deleting them) contradicts "not lost".
 > 2. **REQ-5: how long is "a while"?** *I recommend* 30 days of inactivity, renewed on each visit, because that matches the PRD's "don't make me sign in every day".
@@ -442,9 +457,9 @@ Each round is one message, up to five questions, each with the agent's recommend
 
 > **Lucía:** 1 agree, Irene confirmed. 2 agree. 3 agree, last phase.
 
-**Round 2, edge cases and failure.** The agent asks about brute-force sign-in attempts (it recommends per-account and per-IP rate limits), about what the API does with a note ID that belongs to someone else (it recommends answering 404, not 403, so IDs cannot be probed), and about the bulk edit from example 2 (it recommends that a bulk change listing someone else's note fails as a whole under `NOTES-BULK-2`, which needs no new rule). It also corrects one of Lucía's design notes: her draft had the web app pass a user ID to the API, which anyone could forge; it recommends that the API issue and check session tokens itself.
+**Round 2.** The answers unblock a question that could not be asked before: with the claim step agreed, what happens if nobody ever signs up with the operator's email? The agent recommends that the notes stay unowned and hidden until a `claim` command run by the operator assigns them, so they are never lost. The round also carries the questions that were ready from the start but did not fit in round 1: brute-force sign-in attempts (it recommends per-account and per-IP rate limits), what the API does with a note ID that belongs to someone else (it recommends answering 404, not 403, so IDs cannot be probed), and the bulk edit from example 2 (it recommends that a bulk change listing someone else's note fails as a whole under `NOTES-BULK-2`, which needs no new rule). It also corrects one of Lucía's design notes: her draft had the web app pass a user ID to the API, which anyone could forge; it recommends that the API issue and check session tokens itself.
 
-**Round 3, shape and order.** Phases that each ship alone, smallest first; the contracts that change; the ADRs to write.
+**Round 3.** With the requirements and the claim step settled, the phase split is answerable: phases that each ship alone, smallest first, password reset last as agreed; the contracts that change; the ADRs to write. Lucía agrees, nothing is left to ask, and the questions end.
 
 The agent summarises everything agreed, Lucía approves, and only then does it write `docs/epics/users-and-login/README.md`:
 
@@ -667,7 +682,7 @@ $ pnpm review:cleanup api 91
 |---|---|---|---|---|
 | Who starts it | Anyone, from a bug issue or a message | The agent, with `plan:new` | The agent, with `plan:new` | The agent, with `epic:new` and the `epic-design` skill |
 | Design artifact | A few lines in chat | Design spec with criteria and documentation impact | Spec, ADR, area document, manual steps | PRD, epic design, then one spec per phase |
-| Human gates | Approve the design; approve push; merge | Approve the spec; review the spec PR; approve pushes; review and merge code; merge completion | Same, plus the ADR review and the manual steps | Answer three rounds; approve the summary; review the epic PR; then every phase's gates |
+| Human gates | Approve the design; approve push; merge | Approve the spec; review the spec PR; approve pushes; review and merge code; merge completion | Same, plus the ADR review and the manual steps | Answer the question rounds; approve the summary; review the epic PR; then every phase's gates |
 | Trace left behind | Commit message, test titled with a criterion, closed issue | Spec, plans, rulings, criteria, contract, maps, footers, closed issue | All of that, plus the ADR and the area document | All of that per phase, plus the requirement map |
 
 Prefer the left column whenever the change fits it: example 1 cost a fraction of example 2 and left a perfectly good trace. Reach for the right columns when the design deserves to be reviewed and kept.

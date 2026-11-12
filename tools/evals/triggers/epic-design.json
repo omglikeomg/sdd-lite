@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Here is the PRD for the loyalty program, can you turn it into an epic?",
+    "The PM sent a product brief for multi-currency checkout; it needs several pieces of work",
+    "Let's refine the payments epic, the requirements changed",
+    "We have a large outcome to deliver across api and web: subscriptions. Where do we start?"
+  ],
+  "negative": [
+    { "prompt": "Make a small change: add a phone field to the signup form", "owner": "hub-workflow" },
+    { "prompt": "Let's brainstorm a new creative feature idea for the app", "owner": "superpowers:brainstorming" },
+    { "prompt": "Write the implementation plan for this approved spec", "owner": "superpowers:writing-plans" }
+  ]
+}

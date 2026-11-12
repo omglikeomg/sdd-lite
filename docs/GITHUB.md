@@ -38,7 +38,7 @@ sequenceDiagram
 | Epic design ready | `pnpm epic:pr <slug> --create` | Epic PR labelled `epic:<slug>`; "Epic design ready for review" comment with outcome and phases |
 | A phase of an epic starts | `pnpm plan:new <slug> --repos <a,b> --epic <epic>` | Its tracking issue becomes a **sub-issue** of the epic's issue; every PR of the phase (hub and product) carries `epic:<epic>` |
 | A bug is picked up | `pnpm work:start <repo> fix/<slug> --issue <n>` | The issue and its comments are saved as context for the agent; `tier:bounded`, `status:ongoing`; "Work started" comment |
-| The fix is ready | `pnpm work:pr <repo> fix/<slug> --create` | PR with Context, Root cause, What changed, How it was verified and `Fixes <issue>`; "Fix ready for review" comment explaining cause and fix |
+| The fix is ready | `pnpm work:pr <repo> fix/<slug> --create` | PR with Context, Root cause, What changed, How it was verified and `Fixes <issue>`; "Fix ready for review" comment explaining cause and fix; on an issue in the hub repository, `breaking-change` if a commit header has `!` |
 | Planned work stops | `pnpm plan:abandon <id> --reason "…"` | Open spec and code PRs closed with the reason; "Abandoned" comment; issue closed as *not planned* |
 
 Every `--create` pushes the branch and opens the PR. Agents must ask before running it, the same as for any push.
@@ -114,7 +114,7 @@ Then add a board column or table group per `status:*` label, and filters by `rep
 The commands write every PR the hub opens, so they read the same everywhere:
 
 - **Code PRs** (`plan:pr --repo`): Context (goal, design, tracking issue), What changed (tasks and files), Acceptance criteria, Decisions made during implementation, Review focus (from the plan), How it was verified, then the `Plan:`, `Task:` and `Ruling:` footers.
-- **Fix PRs** (`work:pr`): Context (the issue it came from), Root cause or Rationale, What changed, How it was verified, Risk, then `Fixes` and `Refs:`. The sections come from labelled paragraphs in the commit body (`Cause:`, `Rationale:`, `Fix:`, `Verification:`, `Risk:`), described in `docs/WORKFLOW.md`.
+- **Fix PRs** (`work:pr`): Context (the issue it came from), Root cause or Rationale, What changed, How it was verified, Merge danger (door and blast radius), then `Fixes` and `Refs:`. The sections come from labelled paragraphs in the commit body (`Cause:`, `Rationale:`, `Fix:`, `Verification:`, `Door:`, `Blast radius:`), described in `docs/WORKFLOW.md`.
 - **Hub PRs written by hand** use `.github/pull_request_template.md`.
 
 ## Continuous integration
@@ -144,6 +144,6 @@ The commands write every PR the hub opens, so they read the same everywhere:
 | "could not add label: '…' not found" | The labels were never created, or the repository or epic is new | `pnpm gh:setup` (labels are created or updated) |
 | "cannot tell the GitHub repository of …" | Its remote URL is not a GitHub URL the hub can read | Set `"github": "owner/name"` for that repository in `hub.config.json` |
 | A PR was opened but the issue got no comment | The command stopped on an error after opening the PR | Rerun the same `--create`: it reuses the open PR and posts only the comments that are missing (each carries a hidden marker) |
-| Commands act as the wrong account | `gh` can be logged into several accounts | `pnpm doctor` shows the active one; `gh auth switch --user <account>` |
+| Commands act as the wrong account | `gh` can be logged into several accounts | `pnpm hub:doctor` shows the active one; `gh auth switch --user <account>` |
 
 More situations and their fixes: `docs/TROUBLESHOOTING.md`.

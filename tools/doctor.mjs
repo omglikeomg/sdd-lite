@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `pnpm doctor` — is this clone ready to work? Read-only; every problem names its fix.
+// `pnpm hub:doctor` — is this clone ready to work? Read-only; every problem names its fix.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -19,7 +19,7 @@ const bad = (msg, fix) => results.push({ ok: false, msg, fix });
 const note = (msg) => results.push({ ok: true, note: true, msg });
 
 const pre = prerequisiteProblems();
-if (pre.length) for (const p of pre) bad(p, 'install or upgrade, then rerun `pnpm doctor`');
+if (pre.length) for (const p of pre) bad(p, 'install or upgrade, then rerun `pnpm hub:doctor`');
 else ok('Node, git and Graphify versions');
 
 // The hub's rules depend on how Graphify and Superpowers behave; tools/lib/compat.mjs lists what.

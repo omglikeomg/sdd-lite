@@ -162,6 +162,8 @@ Billing lives in \`repos/api/src/billing/billing.module.ts\`.
 
 ### Task 1: Charge a saved card
 
+**Blocked by:** None
+
 - [ ] **Step 1: Write the failing test**
 - [ ] **Step 2: Commit**
 `);
@@ -252,9 +254,9 @@ test('bounded work from a bug issue: context in, explanation and PR back out', (
   const wt = join(hub, '.worktrees', 'api--invoice-rounding');
   write(join(wt, 'src/billing/round.ts'), 'export const round = (n: number) => Math.round(n * 100) / 100;\n');
   git(wt, 'add', '-A');
-  git(wt, 'commit', '--quiet', '-m', 'fix(billing): round invoice totals half-up', '-m', 'Cause: totals were truncated with Math.floor.\nFix: round half-up to cents.', '--trailer', 'Refs: BILL-ISSUE-1');
+  git(wt, 'commit', '--quiet', '-m', 'fix(billing)!: round invoice totals half-up', '-m', 'Cause: totals were truncated with Math.floor.\nFix: round half-up to cents.', '--trailer', 'Refs: BILL-ISSUE-1');
   const pr = tool('plan.mjs', 'work-pr', 'api', 'fix/invoice-rounding', '--create');
-  assert.match(pr, /TITLE\nfix\(billing\): round invoice totals half-up/);
+  assert.match(pr, /TITLE\nfix\(billing\)!: round invoice totals half-up/);
   const body = gh().prs['acme/api#47'].body;
   assert.match(body, /^## Context\n\nReported in acme\/hub#46: \*\*Invoice totals off by a cent\*\*\./);
   assert.match(body, /## Root cause\n\ntotals were truncated with Math\.floor\.\n\n## What changed\n\nround half-up to cents\./);
@@ -263,12 +265,13 @@ test('bounded work from a bug issue: context in, explanation and PR back out', (
   assert.match(body, /\n\nFixes acme\/hub#46\nRefs: BILL-ISSUE-1$/);
   assert.match(issue(46).comments.at(-1).body, /### Fix ready for review in `api`[\s\S]*\*\*Root cause:\*\* totals were truncated[\s\S]*\*\*Fix:\*\* round half-up[\s\S]*pull\/47\. Merging it closes this issue/);
   assert.ok(issue(46).labels.includes('status:pending-review'));
+  assert.ok(issue(46).labels.includes('breaking-change'), '! in a bounded commit header marks the issue as breaking');
 
   // A teammate reviews the PR: the issue it fixes comes with it.
   git(apiBare, 'update-ref', 'refs/pull/47/head', 'refs/heads/fix/invoice-rounding');
   tool('review.mjs', 'start', 'api', '47');
   const review = readFileSync(join(hub, '.reviews/api-47/context.md'), 'utf8');
-  assert.match(review, /\*\*fix\(billing\): round invoice totals half-up\*\* \(https:\/\/github\.com\/acme\/api\/pull\/47\), branch `fix\/invoice-rounding`/);
+  assert.match(review, /\*\*fix\(billing\)!: round invoice totals half-up\*\* \(https:\/\/github\.com\/acme\/api\/pull\/47\), branch `fix\/invoice-rounding`/);
   assert.match(review, /### Issue acme\/hub#46\n\n#### acme\/hub#46: Invoice totals off by a cent[\s\S]*Seen on order 1234/);
   tool('review.mjs', 'cleanup', 'api', '47');
   rmSync(join(hub, '.reviews'), { recursive: true });
@@ -311,7 +314,7 @@ test('epics in GitHub mode: adopted issue, design PR, phases as sub-issues, epic
 
   const id = String(phaseNo).padStart(6, '0');
   write(join(hub, `docs/superpowers/specs/${id}-saved-addresses-design.md`), `---\ntype: design\nstatus: approved\n---\n# Saved addresses\n\n## Goal\n\nReuse the last address.\n\n## Acceptance criteria\n\n- **ADDR-1** When a returning customer checks out, the system shall offer their last address. (REQ-1)\n\n## Documentation impact\n\n- None: no living document changes.\n\n## Links\n\n- Epic: [faster-checkout](../../epics/faster-checkout/README.md)\n- Feature: \`docs/features/addresses.md\`\n`);
-  write(join(hub, `docs/superpowers/plans/${id}-saved-addresses--api.md`), `# Saved addresses (api) Implementation Plan\n\n**Goal:** Offer the last address.\n\n**Spec:** [design](../specs/${id}-saved-addresses-design.md)\n\n**Repo:** \`repos/api\`\n\n**Branch:** \`feat/${id}-saved-addresses\`\n\n---\n\n### Task 1: Last address\n\n- [ ] **Step 1: Test**\n`);
+  write(join(hub, `docs/superpowers/plans/${id}-saved-addresses--api.md`), `# Saved addresses (api) Implementation Plan\n\n**Goal:** Offer the last address.\n\n**Spec:** [design](../specs/${id}-saved-addresses-design.md)\n\n**Repo:** \`repos/api\`\n\n**Branch:** \`feat/${id}-saved-addresses\`\n\n---\n\n### Task 1: Last address\n\n**Blocked by:** None\n\n- [ ] **Step 1: Test**\n`);
   git(hub, 'add', '-A');
   git(hub, 'commit', '--quiet', '-m', `docs(spec): ${id} saved-addresses`);
   tool('plan.mjs', 'pr', id, '--spec', '--create');

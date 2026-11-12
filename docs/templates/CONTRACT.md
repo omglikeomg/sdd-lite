@@ -10,7 +10,7 @@ consumers: [web]
      it describes what main offers today. Cite the code on both sides as backticked `path::Symbol`
      (`pnpm check` requires at least one path per repository; only the symbol form links the graph), link it from "How the repositories
      interact" in docs/ARCHITECTURE.md, and list it in a spec's "Documentation impact" whenever
-     work changes it. A breaking change needs an ADR. -->
+     work changes it. A breaking change (any change to behaviour a consumer can observe) needs an ADR. -->
 
 The API serves catalogue data to the web app over GraphQL at `/graphql`. The web app never calls the database or other services directly.
 
@@ -32,4 +32,4 @@ The web app's copies of the result types live in `repos/web/src/types/catalog.ty
 
 ## Compatibility
 
-Fields are only added, never removed or retyped, without an ADR and a coordinated release of both repositories.
+Every behaviour a consumer can observe is part of this contract, written here or not (Hyrum's Law: with enough consumers, every observable behaviour gets relied on): fields, error text, ordering, timing. Changing one is a breaking change: it needs an ADR and a coordinated release of both repositories. Only one version exists at a time (One-Version Rule): extend an operation rather than add a second version beside it.

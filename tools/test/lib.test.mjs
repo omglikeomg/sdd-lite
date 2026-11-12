@@ -2,17 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parsePlanBranch, branchNameError, commitHeaderError, cleanMessage, footerValues, taskNumbers, isAcId,
-  parseSpecFilename, parsePlanFilename, TEST_TITLE_AC_RE, adrLabel,
+  parseSpecFilename, parsePlanFilename, TEST_TITLE_AC_RE, adrLabel, testTitleCriteria,
 } from '../lib/conventions.mjs';
+import { weakenedChecks } from '../lib/floor.mjs';
 import { splitFrontmatter, setFrontmatterValue, stripCode, codeSpans, links, section } from '../lib/markdown.mjs';
 import { globToRegExp, matchesAny } from '../lib/glob.mjs';
-import { parsePlan, tickTasks, rulingsFromLedger } from '../lib/plans.mjs';
+import { parsePlan, tickTasks, rulingsFromLedger, blockedByError } from '../lib/plans.mjs';
 import { criteriaBlocks, criteriaByFeature, mergeCriteria, newFeatureDoc, splitCriteria, removeCriteria } from '../lib/features.mjs';
 import { loadAcDefinitions } from '../lib/hub.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { explanationSections, fixPrBody } from '../lib/pr-text.mjs';
+import { explanationSections, fixPrBody, featurePrBody, oneWaySigns } from '../lib/pr-text.mjs';
+import { glossaryProblems } from '../lib/glossary.mjs';
 
 test('plan branches carry type, six-digit ID and slug', () => {
   assert.deepEqual(parsePlanBranch('feat/000042-checkout-payments'), { type: 'feat', id: '000042', slug: 'checkout-payments' });
@@ -54,6 +56,130 @@ test('acceptance-criteria IDs exclude ADR and RFC', () => {
   const src = "it('BILL-ISSUE-1: issues', () => {});\ntest.describe(\"CHECKOUT-PAY-2: flow\", () => {});\nit('UTF-8 handling')\nit.each([\n  ['a', 1],\n])('COMPARE-PAGE-4: %s asks for ids', () => {});\nexpect(x).toBe('NOT-AN-ID-1')";
   assert.deepEqual([...src.matchAll(TEST_TITLE_AC_RE)].map((m) => m[1]), ['BILL-ISSUE-1', 'CHECKOUT-PAY-2', 'COMPARE-PAGE-4']);
   assert.equal(adrLabel('7'), 'ADR-0007');
+});
+
+test('skipped and todo tests are not proof of a criterion', () => {
+  const src = [
+    "it('BILL-ISSUE-1: issues', () => {});",
+    "it.skip('BILL-ISSUE-2: refunds', () => {});",
+    "test.todo('BILL-ISSUE-3: voids');",
+    "xit('BILL-ISSUE-4: x', () => {});",
+    "xtest('BILL-ISSUE-5: x', () => {});",
+    "test.fixme('BILL-ISSUE-6: x', async () => {});",
+    "it.skip.each([['a', 1]])('BILL-ISSUE-7: %s', () => {});",
+    "xdescribe('BILL-ISSUE-8: group', () => {});",
+    "test.describe('BILL-ISSUE-9: group', () => {});",
+  ].join('\n');
+  assert.deepEqual(testTitleCriteria(src).map((c) => [c.id, c.skipped]), [
+    ['BILL-ISSUE-1', false], ['BILL-ISSUE-2', true], ['BILL-ISSUE-3', true], ['BILL-ISSUE-4', true], ['BILL-ISSUE-5', true],
+    ['BILL-ISSUE-6', true], ['BILL-ISSUE-7', true], ['BILL-ISSUE-8', true], ['BILL-ISSUE-9', false],
+  ]);
+  assert.deepEqual(testTitleCriteria("it('UTF-8 handling')\nit('ADR-0003: x')"), [], 'only acceptance-criteria IDs');
+});
+
+test('weakened checks are found in a diff', () => {
+  const diff = [
+    'diff --git a/src/a.ts b/src/a.ts',
+    '--- a/src/a.ts',
+    '+++ b/src/a.ts',
+    '@@ -10,0 +11,2 @@',
+    '+  // @ts-ignore',
+    '+  const x = y as any; // eslint-disable-line no-explicit-any',
+    '@@ -20 +22 @@',
+    '-  // eslint-disable-next-line',
+    '+  return x;',
+    'diff --git a/src/a.spec.ts b/src/a.spec.ts',
+    '--- a/src/a.spec.ts',
+    '+++ b/src/a.spec.ts',
+    '@@ -3,3 +3,2 @@',
+    "-it('A-1: works', () => {",
+    "+it.skip('A-1: works', () => {",
+    '-  expect(a).toBe(1);',
+    "@@ -9 +8 @@",
+    "-describe('group', () => {",
+    "+describe.skip('group', () => {",
+    'diff --git a/src/b.spec.ts b/src/b.spec.ts',
+    'deleted file mode 100644',
+    '--- a/src/b.spec.ts',
+    '+++ /dev/null',
+    '@@ -1 +0,0 @@',
+    "-it('B-1: x', () => { expect(1).toBe(1); });",
+    'diff --git a/src/c.spec.ts b/src/c.spec.ts',
+    '--- a/src/c.spec.ts',
+    '+++ b/src/c.spec.ts',
+    '@@ -1 +1 @@',
+    '-  expect(c).toBe(1);',
+    '+  expect(c).toBe(1); ',
+    'diff --git a/vitest.config.ts b/vitest.config.ts',
+    '--- a/vitest.config.ts',
+    '+++ b/vitest.config.ts',
+    '@@ -5,2 +5,2 @@',
+    '-      lines: 80,',
+    '-      branches: 70,',
+    '+      lines: 60,',
+    '+      branches: 75,',
+  ].join('\n');
+  const isTest = (f) => f.endsWith('.spec.ts');
+  assert.deepEqual(weakenedChecks(diff, isTest), [
+    { kind: 'suppression', file: 'src/a.ts', line: 11, text: '// @ts-ignore' },
+    { kind: 'suppression', file: 'src/a.ts', line: 12, text: 'const x = y as any; // eslint-disable-line no-explicit-any' },
+    { kind: 'skipped-test', file: 'src/a.spec.ts', line: 3, text: "it.skip('A-1: works', () => {" },
+    { kind: 'skipped-test', file: 'src/a.spec.ts', line: 8, text: "describe.skip('group', () => {" },
+    { kind: 'removed-assertions', file: 'src/a.spec.ts', line: null, text: '1 fewer assertion' },
+    { kind: 'deleted-test', file: 'src/b.spec.ts', line: null, text: 'test file deleted' },
+    { kind: 'lowered-threshold', file: 'vitest.config.ts', line: 5, text: 'lines: 80 → 60' },
+  ]);
+  assert.deepEqual(weakenedChecks('', isTest), []);
+  const withContext = 'diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,2 +1,3 @@\n const a = 1;\n const b = 2;\n+// @ts-expect-error\n';
+  assert.deepEqual(weakenedChecks(withContext, isTest).map((w) => w.line), [3], 'context lines count towards line numbers');
+});
+
+test('weakened checks feed the blast radius in bounded PRs and get their own section in planned ones', () => {
+  const args = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], sections: explanationSections(['Blast radius: low.']), refs: [], fixesRef: null };
+  assert.doesNotMatch(fixPrBody(args), /Checks weakened|weakens/);
+  const weakened = [{ kind: 'suppression', file: 'src/a.ts', line: 11, text: '// @ts-ignore' }, { kind: 'deleted-test', file: 'src/b.spec.ts', line: null, text: 'test file deleted' }];
+  assert.match(fixPrBody({ ...args, weakened }), /\*\*Blast radius:\*\* low\.\n\nChecks this change weakens:\n\n- suppression: `src\/a\.ts:11` `\/\/ @ts-ignore`\n- deleted test: `src\/b\.spec\.ts` test file deleted/);
+  const feature = { goal: 'g', specRel: 's', trackingRef: null, tasks: '- t', files: [], tests: [], criteria: '- c', rulings: [], reviewFocus: '', footers: 'Plan: 000001' };
+  assert.doesNotMatch(featurePrBody(feature), /Checks weakened/);
+  assert.match(featurePrBody({ ...feature, weakened }), /## Checks weakened\n\n- suppression[\s\S]*\n\nPlan: 000001$/);
+});
+
+test('commit bodies state the door and the blast radius; Risk: still reads as the blast radius', () => {
+  const s = explanationSections(['Fix: drop the column.\nDoor: one-way — the column is dropped.\nBlast radius: clients reading `title`.']);
+  assert.equal(s.door, 'one-way — the column is dropped.');
+  assert.equal(s.blast, 'clients reading `title`.');
+  assert.equal(explanationSections(['Risk: none; valid buckets behave as before.']).blast, 'none; valid buckets behave as before.');
+});
+
+test('one-way signs come from migrations, SQL and code a contract this repository provides cites', () => {
+  const files = [{ status: 'A', path: 'prisma/migrations/20261111_drop/migration.sql' }, { status: 'M', path: 'db/seed.sql' },
+    { status: 'M', path: 'src/billing/billing.service.ts' }, { status: 'M', path: 'src/web/client.ts' }, { status: 'M', path: 'src/other.ts' }];
+  const contracts = [
+    { rel: 'docs/contracts/billing-api.md', text: '---\nprovider: api\nconsumers: [web]\n---\nIssued by `repos/api/src/billing/billing.service.ts::BillingService`, shown by `repos/web/x.tsx`.\n' },
+    { rel: 'docs/contracts/web-events.md', text: '---\nprovider: web\nconsumers: [api]\n---\nConsumed by `repos/api/src/web/client.ts`.\n' },
+  ];
+  assert.deepEqual(oneWaySigns(files, 'api', contracts), [
+    { path: 'prisma/migrations/20261111_drop/migration.sql', why: 'migration' },
+    { path: 'db/seed.sql', why: 'SQL' },
+    { path: 'src/billing/billing.service.ts', why: 'contract `docs/contracts/billing-api.md`' },
+  ]);
+  assert.deepEqual(oneWaySigns([{ status: 'M', path: 'src/other.ts' }], 'api', contracts), []);
+});
+
+test('the PR states its merge danger: written door first, then inferred one-way, else not stated', () => {
+  const base = { issue: null, commits: [{ subject: 'fix: x' }], files: [], tests: [], refs: [], fixesRef: null };
+  const signs = [{ path: 'prisma/migrations/1/migration.sql', why: 'migration' }];
+  const pr = (bodies, oneWay = []) => fixPrBody({ ...base, sections: explanationSections(bodies), oneWay });
+  const danger = (body) => body.slice(body.indexOf('## Merge danger'));
+  assert.doesNotMatch(pr(['Fix: y.']), /## Risk/);
+  assert.match(danger(pr(['Fix: y.'])), /^## Merge danger\n\n\*\*Door:\*\* 🤔 not stated\n\n\*\*Blast radius:\*\* not stated$/);
+  assert.match(pr(['Door: one-way — drops a column.\nBlast radius: title readers.']), /\*\*Door:\*\* ⛔ one-way — drops a column\.\n\n\*\*Blast radius:\*\* title readers\./);
+  assert.match(pr(['Door: two-way; a revert restores it.']), /\*\*Door:\*\* 🔄 two-way; a revert restores it\.\n\n\*\*Blast/);
+  assert.match(pr(['Fix: y.'], signs), /\*\*Door:\*\* ⛔ one-way \(inferred from the diff\)\n\n- `prisma\/migrations\/1\/migration\.sql` \(migration\)\n\n\*\*Blast/);
+  assert.match(pr(['Door: two-way, the migration only adds a nullable column.'], signs),
+    /\*\*Door:\*\* 🔄 two-way, the migration only adds a nullable column\. \(author\)\n\nThe diff touches files that usually mean one-way:\n\n- `prisma\/migrations\/1\/migration\.sql` \(migration\)/);
+  assert.match(pr(['Door: two-way.', 'Door: one-way — sends emails.']), /\*\*Door:\*\* ⛔ two-way\.\n\none-way — sends emails\./, 'any one-way commit makes the PR one-way');
+  assert.match(pr(['Door: probably fine.']), /\*\*Door:\*\* 🤔 probably fine\./, 'a door that names neither way is not stated');
 });
 
 test('frontmatter parsing and editing', () => {
@@ -109,6 +235,30 @@ const PLAN = `# Checkout Implementation Plan
 
 - [ ] not a task checkbox
 `;
+
+test('plans: Blocked by lines are read per task and survive ticking', () => {
+  const plan = PLAN
+    .replace('### Task 1: Charge endpoint\n', '### Task 1: Charge endpoint\n\n**Blocked by:** None\n')
+    .replace('### Task 2: Receipt\n', '### Task 2: Receipt\n\n**Blocked by:** Task 1\n');
+  const p = parsePlan(plan);
+  assert.deepEqual(p.tasks.map((t) => t.blockedBy && t.blockedBy.value), ['None', 'Task 1']);
+  assert.deepEqual(p.tasks.map((t) => t.checkboxes.length), [2, 1], 'the line is not a step');
+  const ticked = tickTasks(plan, new Set([1, 2]));
+  assert.match(ticked, /### Task 2: Receipt\n\n\*\*Blocked by:\*\* Task 1\n/, 'ticking leaves the line as written');
+  assert.ok(parsePlan(ticked).tasks.every((t) => t.checkboxes.every((c) => c.checked)));
+});
+
+test('plans: a task waits only for earlier tasks of its plan', () => {
+  const task = (number, value) => ({ number, line: 1, blockedBy: value === undefined ? null : { line: 2, value } });
+  assert.equal(blockedByError(task(1, 'None')), null);
+  assert.equal(blockedByError(task(3, 'Task 1, Task 2')), null);
+  assert.match(blockedByError(task(2)), /Task 2 has no "\*\*Blocked by:\*\*" line/);
+  assert.match(blockedByError(task(2, '')), /"None" or a list like "Task 1, Task 3"/);
+  assert.match(blockedByError(task(2, 'the API task')), /"None" or a list like "Task 1, Task 3"/);
+  assert.match(blockedByError(task(2, 'Task 1 and Task 3')), /"None" or a list like/);
+  assert.match(blockedByError(task(2, 'Task 2')), /Task 2 is blocked by Task 2; a task waits only for earlier tasks/);
+  assert.match(blockedByError(task(2, 'Task 1, Task 4')), /Task 2 is blocked by Task 4; a task waits only for earlier tasks/);
+});
 
 test('plans: parse, tick, completion', () => {
   const p = parsePlan(PLAN);
@@ -182,4 +332,50 @@ test('specs can retire criteria; retired criteria are not definitions', () => {
   const defs = loadAcDefinitions(root);
   assert.ok(defs.has('PAY-5'));
   assert.ok(!defs.has('PAY-2'), 'a test still citing a retired criterion fails pnpm check');
+});
+
+const GLOSSARY = `# Glossary
+
+What the hub's words mean.
+
+\`\`\`markdown
+### Not a term
+\`\`\`
+
+## Hub
+
+The hub's own vocabulary.
+
+### Ruling
+A decision the executing agent makes where the plan is wrong. It is recorded as a \`Ruling:\` footer.
+_Avoid_: deviation, override.
+
+### Door
+
+Whether reverting the squash undoes a change.
+`;
+
+test('glossary: a well-formed glossary has no problems', () => {
+  assert.deepEqual(glossaryProblems(GLOSSARY), []);
+});
+
+test('glossary: each broken rule is reported once, at its line', () => {
+  const cases = [
+    ['a term outside a context', (t) => t.replace('## Hub\n', '### Orphan\nA stray term.\n\n## Hub\n'), /not under a "## " context/],
+    ['a heading deeper than a term', (t) => `${t}\n#### Detail\n`, /deeper than ###/],
+    ['a term with no definition', (t) => `${t}\n### Frontier\n`, /"Frontier" has no definition/],
+    ['three sentences', (t) => t.replace('a `Ruling:` footer.', 'a `Ruling:` footer. It is kept.'), /3 sentences; the limit is two/],
+    ['a list under a term', (t) => t.replace('_Avoid_: deviation', '- a list item\n_Avoid_: deviation'), /"Ruling": only one definition paragraph/],
+    ['a second paragraph', (t) => t.replace('undoes a change.\n', 'undoes a change.\n\nMore prose.\n'), /"Door": only one definition paragraph/],
+    ['a duplicate term', (t) => `${t}\n### ruling\nAgain.\n`, /"ruling" is defined twice/],
+    ['an avoided word that is a term', (t) => t.replace('override.', 'door.'), /"door" is listed under _Avoid_ but is a term/],
+    ['an email address', (t) => t.replace('What the hub', 'Ask someone@example.com what the hub'), /email address/],
+    ['an @-mention', (t) => t.replace('What the hub', 'Ask @someone what the hub'), /@-mention/],
+  ];
+  for (const [name, mutate, message] of cases) {
+    const problems = glossaryProblems(mutate(GLOSSARY));
+    assert.equal(problems.length, 1, `${name}: ${JSON.stringify(problems)}`);
+    assert.match(problems[0].message, message, name);
+    assert.ok(problems[0].line >= 1, name);
+  }
 });

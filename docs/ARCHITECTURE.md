@@ -38,13 +38,19 @@ flowchart LR
 | `tools/setup.mjs` | `hub:setup`: prerequisites, submodules, hook installation |
 | `tools/git-hooks/run.mjs` | The single entry point every installed git hook calls |
 | `tools/lib/` | Conventions, Markdown, git, hook and acceptance-criteria helpers shared by the tools; `compat.mjs` records what the hub relies on in Graphify and Superpowers |
-| `tools/test/` | Unit tests, an end-to-end test of the full planned-work cycle, and compatibility tests against the installed Graphify and Superpowers |
+| `tools/test/` | Unit tests, an end-to-end test of the full planned-work cycle, compatibility tests against the installed Graphify and Superpowers, and the deterministic checks of the hub's skills |
+| `tools/lib/glossary.mjs` | The format of `docs/GLOSSARY.md`, checked by the `glossary` rule |
+| `tools/lib/skills.mjs` | The skill checks: structure, trigger ranking and description collisions |
+| `tools/evals/` | Trigger prompts per skill (`triggers/`) and behavioural cases for `claude plugin eval` (`cases/`) |
+| `tools/skill-eval.mjs` | `skills:eval`: runs the behavioural cases on demand in a temporary plugin of the hub's skills |
 | `hub.config.json` | Product repositories: path, default branch, test globs, structural files to document |
 | `.claude/skills/graphify-preflight/SKILL.md` | The context-gathering step every design starts with |
 | `.claude/skills/hub-workflow/SKILL.md` | Maps each stage of the work to the command that performs it |
 | `.claude/skills/onboard-repository/SKILL.md` | Drafts a new repository's architecture map from the knowledge graph |
-| `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in up to three rounds of questions, then writes the epic |
+| `.claude/skills/epic-design/SKILL.md` | Challenges a PRD and technical design in rounds of questions that each ask only what can be answered now, then writes the epic |
+| `.claude/skills/wait-what/SKILL.md` | Explains a term from the glossary, specs and code when a person asks, and proposes a missing glossary entry |
 | `.claude/skills/review-pull-request/SKILL.md` | Prepares a teammate's pull request with the hub's context and drafts review comments for a person to post |
+| `.claude/skills/hub-retro/SKILL.md` | Proposes hub changes (checks first, written rules last) from recurring rulings, review findings, check failures and abandon reasons; edits nothing |
 
 The tools are plain Node.js modules with no dependencies, so the hub needs nothing installed beyond Node, git and Graphify.
 
@@ -72,3 +78,4 @@ Accepted decisions in the order they were made. `pnpm check` fails if an accepte
 1. [ADR-0001: The hub holds all specs; product repositories are submodules](adr/0001-hub-with-submodules-holds-all-specs.md)
 2. [ADR-0002: Six-digit work IDs in branches and Conventional Commit footers](adr/0002-work-ids-branches-and-conventional-commits.md)
 3. [ADR-0003: The knowledge graph is derived and never committed](adr/0003-knowledge-graph-is-derived-and-uncommitted.md)
+4. [ADR-0004: One living glossary for the whole system](adr/0004-one-living-glossary.md)

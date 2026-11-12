@@ -1,0 +1,14 @@
+{
+  "positive": [
+    "Wait, what do you mean by door here?",
+    "What does frontier mean in the epic design?",
+    "I'm lost: what is a ruling and where does that word come from?",
+    "That explanation didn't land, what is a living document again?",
+    "What does the term blast radius mean in this design?"
+  ],
+  "negative": [
+    { "prompt": "Let's brainstorm what a loyalty member should be in our product before we build it", "owner": "superpowers:brainstorming" },
+    { "prompt": "Before we design the refund flow, gather what already exists in the code and the ADRs", "owner": "graphify-preflight" },
+    { "prompt": "Here is the PRD for the loyalty program, can you turn it into an epic?", "owner": "epic-design" }
+  ]
+}

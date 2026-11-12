@@ -1,0 +1,11 @@
+{
+  "positive": [
+    "Add the payments-service repository to the hub",
+    "Onboard our new web repo and draft its architecture map",
+    "We just cloned the mobile app; write its architecture map for review"
+  ],
+  "negative": [
+    { "prompt": "Update the architecture document after the billing change merged", "owner": "hub-workflow" },
+    { "prompt": "Review the pull request that adds a new module to api", "owner": "review-pull-request" }
+  ]
+}

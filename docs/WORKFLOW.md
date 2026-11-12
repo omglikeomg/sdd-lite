@@ -27,6 +27,7 @@ This file adds what neither provides: where documents live, how work is identifi
 | `docs/features/` | What the product does, by capability, with acceptance criteria | living |
 | `docs/contracts/` | Interfaces one repository offers and others rely on (APIs, events), citing the code on both sides | living |
 | `docs/patterns/` | How the team builds one kind of thing (a consumer, a controller, a frontend feature), as rules with their reasons | living |
+| `docs/GLOSSARY.md` | The system's vocabulary: one meaning per term, grouped by context | living |
 | `docs/ONBOARDING.md`, `docs/WORKFLOW.md`, `docs/EXAMPLES.md`, `docs/PR_REVIEW.md`, `README.md` | How to join, how to work and how to review | living |
 | `docs/epics/<slug>/` | An outcome delivered in phases: `prd.md` (the product requirements) and `README.md` (the technical design and phases) | record |
 | `docs/superpowers/specs/` | Design specs, one per piece of planned work, named `<id>-<slug>-design.md` | record |
@@ -51,6 +52,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 | `plan:start`, then open a new agent session in the worktree it prints | You: an agent can run `plan:start`, but it cannot move its own session into the worktree |
 | Review an onboarding PR (architecture map drafted by the agent) | You, for what code cannot show: intent, owners, deployment |
 | Review a teammate's PR | You: the agent prepares it and drafts comments (`review-pull-request` skill); you decide and post |
+| Retro of recent hub work | You: the agent proposes hub changes from rulings, review findings, check failures and abandon reasons (`hub-retro` skill), each with its evidence and tier, preferring a check over a written rule; you pick which start, each through its tier |
 
 ### Who sets each status
 
@@ -67,7 +69,7 @@ You talk to the agent in plain words ("start planned work on checkout payments",
 
 ## Work tiers
 
-Superpowers' brainstorming classifies every request out loud as a spike, bounded or architectural change, and follows a different path for each. We add one tier below it and one above it; spikes follow Superpowers (see "Spikes").
+Superpowers' brainstorming sizes every request: a quick, clear task it just does, a small change gets a short design, a project gets a full written design. Those are our Trivial, Bounded and Architectural tiers; we add Epic above them, and spikes follow Superpowers (see "Spikes").
 
 | Tier | Example | What you produce | IDs |
 |---|---|---|---|
@@ -107,8 +109,8 @@ It moves up to Bounded as soon as it changes behaviour a feature document descri
 ### Bounded work
 
 1. Graph preflight (see below), scaled down: one or two queries.
-2. Brainstorming's bounded path presents a short design in chat and writes no spec or plan; nothing starts before a person says yes. The next step is `work:start`.
-3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
+2. Brainstorming treats it as a small change: a short design, approved by a person before anything starts. In the hub that design stays in chat and later in the commit's paragraphs (step 4), with no spec file and no plan; `work:start` takes the place of writing-plans.
+3. `pnpm work:start api fix/login-redirect` creates `.worktrees/api--login-redirect` on that branch from the freshly fetched default branch and proves the hooks run. Implement there with TDD; a bug fix starts with Prove-It: a test that fails because of the bug, before any fix. Never work directly in `repos/<name>`: those checkouts stay at the hub's submodule pointers so the graph and `pnpm check` see the code the documents describe.
 4. Commit with a body made of labelled paragraphs, which `work:pr` turns into the PR's sections:
 
    ```
@@ -117,13 +119,19 @@ It moves up to Bounded as soon as it changes behaviour a feature document descri
    Cause: parseInt read leading digits, so "2abc" became 2.
    Fix: accept the bucket only if it is all digits.
    Verification: route tests for "2abc" and "3.7" expect a 400.
-   Risk: none; valid buckets behave as before.
+   Door: two-way; reverting the squash restores the old parser.
+   Blast radius: clients sending malformed buckets now get a 400 instead of a guess.
 
    Refs: VOTE-SCALE-2
    ```
 
-   Use `Cause:` for a bug and `Rationale:` for any other change; `Context:` and `Risk:` are optional.
-5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Risk, footers); with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
+   Use `Cause:` for a bug and `Rationale:` for any other change; `Context:` is optional. `Door:` and `Blast radius:` are the merge danger a reviewer acts on:
+
+   - **Door.** `one-way` when a revert cannot cleanly undo the change (a data migration, a published contract or event, an external side effect such as sent emails or a third-party call), `two-way` when reverting the squash undoes it, followed by why.
+   - **Blast radius.** What breaks, and for whom, if the change is wrong.
+
+   `work:pr` decides the door in this order: what the commits say (one-way if any commit says so); otherwise one-way inferred from the diff, when it touches a `migrations/` path, a `.sql` file or code that a `docs/contracts/` document this repository provides cites; otherwise "not stated". Paths cannot show that a change is two-way, so when there are no such signs and your human partner has not said, the agent asks before committing. A written door wins over the inference; when a written two-way contradicts the diff, the PR still lists the files. Older commits with `Risk:` read as `Blast radius:`.
+5. `pnpm work:pr api fix/login-redirect` prints the PR (Context, Root cause or Rationale, What changed, How it was verified, Merge danger, footers). Merge danger shows the door as ⛔ one-way, 🔄 two-way or 🤔 not stated, then the blast radius with the checks the branch weakens; with `--create` in GitHub mode it pushes, opens it, and explains the fix on the issue it came from. Squash merge it.
 6. If behaviour changed, update the acceptance criteria in `docs/features/` (hub PR; add a new criterion before committing the code, because the commit hook only accepts `Refs:` IDs the hub defines). If structure changed, update the repository's architecture docs. Once the code PR is merged, that hub PR also moves the repository's submodule pointer to it with `pnpm repo:sync api` (it fetches, checks out the default branch, stages the pointer and refreshes the graph), so `pnpm check` sees the code the documents now describe. Bounded work that changes no document leaves the pointer alone; the next completion moves it.
 7. `pnpm work:cleanup api fix/login-redirect` removes the worktree and local branch.
 
@@ -141,6 +149,7 @@ sequenceDiagram
   A->>H: graphify-preflight, brainstorming, design spec with Documentation impact
   P->>A: approve the spec
   A->>H: writing-plans: one plan per repository
+  P->>A: approve the task list
   P->>H: spec PR (title and body from pnpm plan:pr --spec), review, merge
   P->>R: pnpm plan:start 000042 --repo api
   R-->>A: worktree on feat/000042-checkout-payments from fresh main
@@ -157,11 +166,11 @@ sequenceDiagram
 ```
 
 1. **Allocate.** `pnpm plan:new checkout-payments --repos api,web` fetches the hub, allocates the next ID, creates the branch `docs/000042-checkout-payments-spec` and prints the exact spec and plan paths.
-2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path, which replaces its date-based default name. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. A person approves it; set `status: approved`.
-3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
+2. **Design.** Run the graph preflight, then `superpowers:brainstorming`. Give it the printed spec path, which replaces its date-based default name. The spec starts from `docs/templates/DESIGN-SPEC.md` additions: `## Context` from the preflight, `## Acceptance criteria` in EARS, `## Documentation impact` (every living document the work will change: architecture maps, contracts, feature documents), and links to ADRs. Before asking for approval, a fresh subagent reads the spec and the constraints it cites (ADRs, invariants, contracts), without the designing agent's reasoning, and is told to find what is wrong; the agent fixes the spec or records the trade-off, for at most three rounds, and brings what is still open. A person approves it; set `status: approved`.
+3. **Plan.** `superpowers:writing-plans` writes one plan per repository at the printed paths, with the additions from `docs/templates/PLAN-ADDENDUM.md`. Then the agent shows each plan's task list (title, `Blocked by:` and test seam per task) and waits for a person to approve it; that takes the place of writing-plans' request to review the plan. When it offers to execute the plan (subagent-driven or inline), decline: execution starts after the spec PR is merged, in a new session in the worktree `plan:start` creates.
 4. **Spec PR.** `pnpm check`, commit `docs(spec): 000042 checkout-payments`, push, and open the PR with the title and body from `pnpm plan:pr 000042 --spec`. The body leads with the goal and the behaviour in plain language, so non-engineers can review it. Merge; from here `main` shows the work as approved.
 5. **Execute.** `pnpm plan:start 000042 --repo api` fetches the product repo, creates `.worktrees/api--000042-checkout-payments` on `feat/000042-checkout-payments` from the fresh default branch, proves the hooks work, refreshes the graph and prints the command to start the agent there. The agent runs `superpowers:subagent-driven-development` or `superpowers:executing-plans`. Their worktree step finds it is already in an isolated worktree and goes on to setup; dependencies are already installed with the repository's own package manager, so it skips its `npm install`.
-6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. Review, then squash merge.
+6. **Code PR.** The agent finishes with `superpowers:finishing-a-development-branch`, choosing **Push and create a Pull Request**, with the title and body from `pnpm plan:pr 000042 --repo api`. The body ends with the `Plan:` and `Task:` footers. When the branch weakens a check (a new suppression such as `@ts-ignore` or `eslint-disable`, a skipped or deleted test, fewer assertions in a test file, a lowered coverage threshold), the body lists it under **Checks weakened** (`work:pr` lists it under the blast radius); it is a report for the reviewer, not a block. Review, then squash merge.
 7. **Complete.** When every repository's code PR is merged, `pnpm plan:complete 000042` creates `docs/000042-checkout-payments-completion`, ticks the plan checkboxes from the `Task:` footers, copies the agent's rulings from the `Ruling:` footers (and from the Superpowers ledger if a run left one), records the merge commits, moves the submodule pointers, moves the spec's acceptance criteria into the feature document named in its `## Links`, and sets the spec to `done`.
 8. **Completion PR.** The agent applies the spec's Documentation impact (it is printed by `plan:complete`) to the living documents and ticks each item; `pnpm check` refuses a done spec with an unticked item, and also names any structural file no architecture document covers. Commit `docs(completion): 000042 checkout-payments`, open the PR with `pnpm plan:pr 000042 --completion` (it lists the documentation updated), review, merge.
 9. **Clean up.** `pnpm plan:cleanup 000042` removes the worktrees and local branches once the completion PR is on `main`.
@@ -183,7 +192,7 @@ If merged work fails QA, `pnpm plan:revert 000042` prints, without running anyth
 
 ## Graph preflight
 
-Before any design, run the `graphify-preflight` skill (`.claude/skills/graphify-preflight/SKILL.md`). It refreshes the graph with `graphify update .`, queries it, opens the files it points to, and produces a `## Context` block: existing modules to reuse, constraining ADRs and features, high-traffic modules the change touches, and open risks. Brainstorming's "Explore project context" step **is** this preflight.
+Before any design, run the `graphify-preflight` skill (`.claude/skills/graphify-preflight/SKILL.md`). It refreshes the graph with `graphify update .`, queries it, opens the files it points to, and produces a `## Context` block: existing modules to reuse, constraining ADRs and features, high-traffic modules the change touches, and open risks. Brainstorming reads the project before its first message; this preflight **is** that reading, and it runs every time.
 
 Only edges tagged `EXTRACTED` count as facts. `INFERRED` and `AMBIGUOUS` edges are leads to verify by reading the code.
 
@@ -256,7 +265,7 @@ An epic is an outcome too big for one design spec: usually a PM's PRD plus an en
 ```mermaid
 flowchart TD
   prd[PRD from the PM + your technical design] --> new[pnpm epic:new slug --prd file]
-  new --> skill[epic-design skill: preflight, then up to 3 rounds of challenging questions]
+  new --> skill[epic-design skill: preflight, then rounds of challenging questions until none is left]
   skill --> write[README.md: requirement map, direction, phases]
   write --> pr[pnpm epic:pr slug: PM and tech lead review, merge]
   pr --> p1[Phase 1: pnpm plan:new … --epic slug, the normal architectural cycle]
@@ -265,7 +274,7 @@ flowchart TD
 ```
 
 1. **Start.** Give the agent the PRD and your design; it runs `pnpm epic:new <slug> --prd <file> [--issue <n>]`, which opens the branch `docs/epic-<slug>`, stores the PRD and, in GitHub mode, creates or adopts the epic's issue.
-2. **Challenge.** The `epic-design` skill grounds itself in the graph, numbers the requirements, then asks at most three rounds of up to five questions, each with its recommended answer: requirements first, then edge cases and failure modes, then phase boundaries, contracts and decisions. Nothing is written until you approve the summary.
+2. **Challenge.** The `epic-design` skill grounds itself in the graph, numbers the requirements, then asks rounds of up to five questions, each with its recommended answer. Each round asks only what you can answer now: a question waits while an answer it depends on is still open. Requirements, edge cases and failure modes, and phase boundaries, contracts and decisions are ground to cover, not an order. There is no round limit: questions end when none is left or you say to wrap up, and anything still open goes into the summary as a marked assumption. Nothing is written until you approve the summary.
 3. **Write and review.** It writes `README.md`; `pnpm check` verifies every requirement is mapped; `pnpm epic:pr <slug>` gives the PR text (in GitHub mode `--create` opens it and comments on the epic's issue). PM and tech lead review the direction and phases.
 4. **Phases.** Each phase starts only when the previous one is complete, as planned work (`pnpm plan:new <slug> --repos … --epic <epic>`) or bounded work. Its spec links the epic in `## Links` (`- Epic: [<epic>](../../epics/<epic>/README.md)`), its acceptance criteria name the requirements they fulfil (`(REQ-2)`), and the epic's Phases table gets its spec link. In GitHub mode its tracking issue becomes a sub-issue of the epic's issue, and its PRs carry the `epic:<slug>` label.
 5. **Done.** When every phase links a spec that is done or abandoned, set the epic to `done` in a hub PR; `pnpm epic:pr <slug>` then writes a closing PR text with `Closes #<epic issue>`.
@@ -281,9 +290,10 @@ Spikes follow Superpowers (answer first, throwaway code); write a spike note onl
 Plans come from `superpowers:writing-plans` unchanged, with the additions in `docs/templates/PLAN-ADDENDUM.md`:
 
 - header lines `**Repo:**` and `**Branch:**`;
+- tasks that are vertical slices (tracer bullets), each with a `**Blocked by:**` line naming `None` or earlier tasks of the same plan, ordered prefactor first, contract first across repositories, riskiest first; wide refactors go expand–contract. `pnpm check` enforces the line; a person approves the task list before the spec PR;
 - an `## Execution rules` section the executing agent must follow. With `superpowers:subagent-driven-development` that is the controller: each implementer subagent receives only its own `### Task N` section, so anything an implementer must do belongs in the task's steps;
 - every commit step written as `git commit -m "<type>(<scope>): <summary>" --trailer "Task: <n>" --trailer "Refs: <ids>"`, because the implementer subagent sees only its own task;
-- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`.
+- every test that proves an acceptance criterion has a title starting with the ID, e.g. `it('CHECKOUT-PAY-1: charges the saved card', …)`. A skipped or todo test (`.skip`, `.todo`, `.fixme`, `xit`, `xtest`, `xdescribe` on the title's line) proves nothing (Beyoncé Rule: if you rely on it, put a test on it).
 
 Plans have no frontmatter. Their checkboxes stay unticked until `pnpm plan:complete` ticks them from git history; `pnpm check` rejects hand-ticked boxes. Progress during execution is shown by `pnpm plan:status`.
 
@@ -326,7 +336,7 @@ IDs are six digits, allocated only by `pnpm plan:new`, shared by the design spec
 
 From most to least durable:
 
-1. **Tests name acceptance criteria.** A test title starting with `CHECKOUT-PAY-2:` ties behaviour to its specification; `pnpm check` verifies the link in both directions.
+1. **Tests name acceptance criteria.** A test title starting with `CHECKOUT-PAY-2:` ties behaviour to its specification; `pnpm check` verifies the link in both directions, and does not count a skipped or todo test as proof.
 2. **Commit footers.** `git blame` gives the commit; its `Plan:` and `Refs:` footers give the plan, ADRs and criteria.
 3. **Rationale comments**, only where the code alone cannot explain a choice:
 
@@ -344,7 +354,7 @@ Ask the agent to "onboard <name>". Its `onboard-repository` skill runs `pnpm rep
 
 ## Reviewing pull requests
 
-Ask the agent to "help me review api#318". Its `review-pull-request` skill runs `pnpm review:start api 318`, which checks out the PR's head in `.worktrees/api--review-318` (so line numbers match the code under review), saves the diff, refreshes the graph and writes `.reviews/api-318/context.md` with what the hub knows about the change: the spec, plan, Review Focus, rulings and criterion coverage for planned work (found from the commits' `Plan:` footers or the branch name), the fixed issue for a bug fix in GitHub mode, and the architecture documents, contracts, ADRs and team guidelines that govern the changed files.
+Ask the agent to "help me review api#318". Its `review-pull-request` skill runs `pnpm review:start api 318`, which checks out the PR's head in `.worktrees/api--review-318` (so line numbers match the code under review), saves the diff, refreshes the graph and writes `.reviews/api-318/context.md` with what the hub knows about the change: the spec, plan, Review Focus, rulings and criterion coverage for planned work (found from the commits' `Plan:` footers or the branch name), the fixed issue for a bug fix in GitHub mode, the architecture documents, contracts, ADRs and team guidelines that govern the changed files, and the checks the diff weakens.
 
 The skill reviews through the lenses you choose and drafts each comment in two parts: a short one to paste for the author, and the evidence you need to defend it. It writes to `.reviews/api-318/review.md` and never posts, approves or pushes. `pnpm review:cleanup api 318` removes the worktree and keeps the notes. Team guidelines are listed per repository in `hub.config.json` as `reviewGuidelines` (hub-relative paths). The full guide for reviewers is `docs/PR_REVIEW.md`.
 
@@ -352,7 +362,7 @@ The skill reviews through the lenses you choose and drafts each comment in two p
 
 `docs/contracts/<name>.md` describes an interface one repository offers and others rely on: a GraphQL or REST API, events, a shared package. Frontmatter names `provider: <repo>` and `consumers: [<repo>, …]`; the body lists operations, types, errors and compatibility rules, citing the code on both sides with backticked `path::Symbol` citations. `pnpm check` requires at least one cited path in each named repository and a link from "How the repositories interact" in `docs/ARCHITECTURE.md`, so Graphify connects provider and consumer code through the contract.
 
-Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (removing or retyping anything a consumer uses) needs an ADR and a release plan for both sides.
+Contracts are living documents: work that changes one lists it in its spec's Documentation impact. A breaking change (changing any behaviour a consumer can observe and rely on: fields, error text, ordering, timing) needs an ADR and a release plan for both sides.
 
 ## Patterns
 
@@ -365,6 +375,28 @@ Patterns are optional; the kit ships none. Repository maps connect them to code:
 - reviews get a Patterns lens for every pattern the changed files' documents cite.
 
 Adding or changing a pattern is a hub PR a person approves. It needs an ADR only when it reverses a direction existing code relies on.
+
+## Glossary
+
+`docs/GLOSSARY.md` gives each word the system uses one meaning ([ADR-0004](adr/0004-one-living-glossary.md)). Each context is a `##` section (`## Hub` today; a product domain gets its own when its repository brings terms), and each term a `###` heading under it:
+
+```markdown
+### Ruling
+A decision the executing agent makes where the plan is wrong or silent, or a review finding it parks. It is recorded as a `Ruling: …` commit footer.
+_Avoid_: deviation, override
+```
+
+- **One definition paragraph, at most two sentences**, saying what the term is in this system, then optionally one `_Avoid_:` line with the words not to use for it. Nothing else goes under a term: no lists, code or implementation detail. Sentences are counted by their final `.`, `!` or `?`, so abbreviations such as "e.g." count as one; write "such as" instead.
+- **Only this system's concepts.** General programming terms stay out, even when the code uses them everywhere.
+- **No personal data.** `pnpm check` rejects email addresses and @-mentions; reviewers catch names.
+
+It is a living document, so it changes when `main` does:
+
+- A design that introduces or changes a term lists `docs/GLOSSARY.md` in its Documentation impact, and the completion PR writes the entry; until then the spec (or the epic's README) carries the agreed definition.
+- Bounded work updates it in the hub PR that documents the merged code.
+- A term for code already on `main` that the glossary lacks can be added in a small hub PR.
+
+The `graphify-preflight` skill reads it and lists the relevant terms in the Context block; words a request uses that are missing or used differently become open questions for the design. `epic-design` challenges the PRD's words the same way, and the `wait-what` skill explains a term on request and proposes a missing entry. Headings are graph nodes, so `graphify query` finds terms and documents can link `GLOSSARY.md#<term>`.
 
 ## Architecture documents
 
@@ -406,6 +438,7 @@ Diagrams are welcome and written in Mermaid. Graphify skips fenced code blocks, 
 | `patterns` | Each pattern has a `## Rules` section with at least one rule |
 | `contracts` | Contracts name a configured provider and consumers, cite code in each, and are linked from `docs/ARCHITECTURE.md` |
 | `epics` | Each epic has `prd.md`; every `REQ-n` is in the requirement map and exists; a done epic links only done or abandoned specs; specs cite only requirements their epic defines |
+| `glossary` | In `docs/GLOSSARY.md`, every `###` term sits under a `##` context and holds one definition paragraph of at most two sentences plus an optional `_Avoid_:` line; no term is defined twice or listed under another term's `_Avoid_`; no email addresses or @-mentions |
 
 Templates in `docs/templates/` are exempt. The check reads the working tree, including documents not yet committed, but skips files git ignores: to keep personal notes inside the hub without failing the check (and the commit hook that runs it), list their folder in your own `.git/info/exclude`.
 
@@ -434,7 +467,7 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | Command | Does |
 |---|---|
 | `pnpm hub:setup` | Checks Node 20+, git 2.36+, Graphify 0.9.80+; checks out submodules; installs hooks; sets the hub's `submodule.recurse=true` and `push.recurseSubmodules=check` |
-| `pnpm doctor` | Read-only health check: versions (and whether they differ from the ones the hub was verified with), the Superpowers texts the hub relies on, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
+| `pnpm hub:doctor` | Read-only health check: versions (and whether they differ from the ones the hub was verified with), the Superpowers texts the hub relies on, hooks really running in every repository, submodules at their pointers, worktrees left from completed plans |
 | `pnpm repo:add <name> <git-url> [--preset nest,next,sst,cqrs] [--branch main]` | Adds a product repository as a submodule and configures it |
 | `pnpm repo:sync <name>` | Moves the repository's submodule pointer to its freshly fetched default branch and stages it, for the hub PR that documents merged bounded work or resolves a pointer conflict |
 | `pnpm epic:new <slug> [--prd <file>] [--issue <n>] [--title "…"]` | Starts an epic: branch `docs/epic-<slug>`, the PRD stored as `prd.md`, the epic's issue in GitHub mode |
@@ -454,7 +487,8 @@ Repositories that use lefthook get a `lefthook-local.yml` (listed in `.git/info/
 | `pnpm review:start <repo> <pr>` | Checks out a pull request's head in a review worktree and writes its review context to `.reviews/<repo>-<pr>/` (see "Reviewing pull requests") |
 | `pnpm review:cleanup <repo> <pr>` | Removes the review worktree; keeps the notes in `.reviews/` |
 | `pnpm check` | Runs every rule above |
-| `pnpm test` | Tests for the tools themselves |
+| `pnpm test` | Tests for the tools themselves, and the deterministic checks of the hub's skills (see "Testing the hub's skills") |
+| `pnpm skills:eval [options]` | Behavioural evals of the hub's skills through `claude plugin eval`; on demand only, since every run is a model call (see "Testing the hub's skills") |
 
 Set `HUB_SKIP_GRAPHIFY=1` to skip Graphify where it is not installed (the tools' own tests do this).
 
@@ -475,11 +509,25 @@ Files stay the source of truth: GitHub only ever receives what the hub's documen
 - **OpenCode** reads `AGENTS.md` and finds the preflight skill in `.claude/skills/`. It does not look for skills above a git worktree, so execution sessions rely on the plan's `## Execution rules`, which the executing agent reads (implementer subagents get their task's steps).
 - Install Superpowers in each harness you use; Graphify's own skill is optional.
 
+## Testing the hub's skills
+
+The hub's skills in `.claude/skills/` are checked in two tiers.
+
+`pnpm test` runs `tools/test/skills.test.mjs`, with no network and no model:
+
+- **Structure.** The frontmatter `name` matches the folder. The description starts with "Use when", says when to use the skill, and ends with one short ` - ` clause saying what the skill does without listing its steps. The skill has `## Overview`, `## When NOT to use`, `## Red flags` and `## Verification` sections, and every Verification item ends with `— **Evidence:** <what shows it>`. It stays under 500 lines.
+- **Triggers.** `tools/evals/triggers/<skill>.json` lists prompts that should fire the skill (`positive`, at least three) and similar prompts that should not (`negative`, at least two, each with the `owner` skill that should take it, such as `hub-workflow` or `superpowers:brainstorming`). The match is lexical: each description becomes a TF-IDF vector, and a prompt must rank its skill first, or rank its owner above the skill. A failure usually means the description lacks the words people use; fix the description, not the prompt.
+- **Collisions.** No two descriptions, among the hub's skills or against the installed Superpowers skills, may be too alike (the limit is in the test).
+
+Cases naming a Superpowers skill skip when Superpowers is not installed, as in CI. A new skill fails `pnpm test` until it has its trigger file; give it negatives owned by the skills it could be confused with.
+
+`pnpm skills:eval` copies the skills and `tools/evals/cases/` into a temporary plugin and runs `claude plugin eval` on it (Claude Code 2.1.269 or later), with and without the skills. Each case is a folder with a `prompt.md` and its `graders/`: pressure cases check that a skill holds when the prompt argues for skipping it, and precision cases check that a skill stays quiet where a lexical match cannot tell the difference (reviewing your own branch is not `review-pull-request`). Runs happen in an empty sandbox where tools are denied, so each prompt asks the agent to load any skill that applies (a real session's Superpowers hook does that) and describe its plan without running commands, and the graders judge that plan, not whether hub commands succeed. Pass options through, for example `pnpm skills:eval --case review-* --runs 1 --model haiku --max-cost-usd 0.50`; the report lands in `.skill-evals/<timestamp>/`. Skill invocation is stochastic: read the report, not only the exit code.
+
 ## Tested with
 
-The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 6.4.1**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers.
+The hub's rules depend on how its two tools behave: which Graphify citations become edges, what `graphify update .` prints, which Superpowers steps exist and where they write. The hub was last verified with **Graphify 0.9.82** and **Superpowers 7.0.2**; `TESTED` in `tools/lib/compat.mjs` holds the same numbers. Superpowers 7.0.0, which the official marketplace still installs, passes the same checks.
 
-- `pnpm doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
+- `pnpm hub:doctor` says when an installed version differs, and fails if a Superpowers text the hub relies on is gone (the list, with the reason for each, is `SUPERPOWERS_TEXTS` in `tools/lib/compat.mjs`).
 - `pnpm test` runs `tools/test/compat.test.mjs`, which builds a small graph with the installed Graphify and checks every behaviour the preflight and the reviews use. Each part skips itself when its tool is missing, as in CI.
 
 After upgrading either tool, run `pnpm test`. When it passes, update the numbers here and in `TESTED`; when it fails, adjust the rule that depends on the changed behaviour.

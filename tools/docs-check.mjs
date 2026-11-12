@@ -7,19 +7,20 @@ import { pathToFileURL } from 'node:url';
 import { HUB_ROOT, DIRS, loadConfig, loadAdrs, loadAcDefinitions, loadWork, read, mdFiles } from './lib/hub.mjs';
 import { splitFrontmatter, stripCode, codeSpans, links, headings, section } from './lib/markdown.mjs';
 import {
-  SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, TEST_TITLE_AC_RE, isAcId,
+  SPEC_STATUSES, ADR_STATUSES, SPIKE_STATUSES, ADR_REF_RE, adrLabel, testTitleCriteria,
   parsePlanBranch, specPath, SLUG_RE, REQ_DEFINITION_RE, REQ_REF_RE,
 } from './lib/conventions.mjs';
-import { parsePlan } from './lib/plans.mjs';
+import { parsePlan, blockedByError } from './lib/plans.mjs';
 import { matchesAny, globToRegExp } from './lib/glob.mjs';
 import { gitTry, lsFiles } from './lib/git.mjs';
+import { glossaryProblems } from './lib/glossary.mjs';
 
 const SKIP_ANYWHERE = new Set(['.git', 'node_modules']);
 const SKIP_TOP = new Set(['repos', '.worktrees', '.reviews', 'graphify-out', '.superpowers']);
 const CODE_EXT = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const LIVING = (rel) =>
   rel.startsWith(`${DIRS.features}/`) || rel.startsWith(`${DIRS.codebases}/`) || rel.startsWith(`${DIRS.contracts}/`) || rel.startsWith(`${DIRS.patterns}/`) ||
-  ['docs/ARCHITECTURE.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
+  ['docs/ARCHITECTURE.md', 'docs/GLOSSARY.md', 'docs/ONBOARDING.md', 'docs/WORKFLOW.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'].includes(rel);
 
 export function allMarkdown(root) {
   const out = [];
@@ -67,6 +68,7 @@ export function runChecks(root = HUB_ROOT) {
   checkContracts(root, cfg, files, texts, err);
   checkPatterns(files, texts, err);
   checkEpics(root, files, texts, err);
+  checkGlossary(texts, err);
   return errors;
 }
 
@@ -283,6 +285,8 @@ function checkPlan(root, p, text, repo, err) {
   plan.tasks.forEach((t, i) => {
     if (t.number !== i + 1) err(p.file, t.line, 'plans', `tasks must be numbered 1..N in order; found Task ${t.number} at position ${i + 1}`);
     if (t.checkboxes.length === 0) err(p.file, t.line, 'plans', `Task ${t.number} has no "- [ ]" steps`);
+    const blocked = blockedByError(t);
+    if (blocked) err(p.file, t.blockedBy ? t.blockedBy.line : t.line, 'plans', blocked);
   });
   for (const t of plan.tasks) {
     const shouldBeChecked = !!plan.completion && !plan.deferred.has(t.number);
@@ -345,6 +349,7 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
     if (features.length > 1) for (const d of features.slice(1)) err(d.file, d.line, 'ac', `${id} is already defined in ${features[0].file}:${features[0].line}`);
   }
   const tested = new Set();
+  const skipped = new Set();
   for (const r of cfg.repos) {
     const st = repoState.get(r.name);
     if (!st) continue;
@@ -352,10 +357,9 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
       readFileSync(join(st.dir, f), 'utf8')
         .split('\n')
         .forEach((line, i) => {
-          for (const m of line.matchAll(TEST_TITLE_AC_RE)) {
-            if (!isAcId(m[1])) continue;
-            tested.add(m[1]);
-            if (!acDefs.has(m[1])) err(`${r.path}/${f}`, i + 1, 'ac', `test cites ${m[1]}, which no feature or design spec defines`);
+          for (const c of testTitleCriteria(line)) {
+            (c.skipped ? skipped : tested).add(c.id);
+            if (!acDefs.has(c.id)) err(`${r.path}/${f}`, i + 1, 'ac', `test cites ${c.id}, which no feature or design spec defines`);
           }
         });
     }
@@ -363,7 +367,9 @@ function checkAcceptanceCriteria(root, cfg, repoState, acDefs, err) {
   if (cfg.repos.every((r) => repoState.get(r.name))) {
     for (const [id, defs] of acDefs) {
       const feature = defs.find((d) => d.kind === 'feature');
-      if (feature && !tested.has(id)) err(feature.file, feature.line, 'ac', `${id} has no test whose title starts with "${id}:" in any configured repo`);
+      if (!feature || tested.has(id)) continue;
+      if (skipped.has(id)) err(feature.file, feature.line, 'ac', `${id} is cited only by skipped tests; a skipped or todo test proves nothing`);
+      else err(feature.file, feature.line, 'ac', `${id} has no test whose title starts with "${id}:" in any configured repo`);
     }
   }
 }
@@ -508,6 +514,14 @@ function checkEpics(root, files, texts, err) {
     const defined = new Set(existsSync(prd) ? [...readFileSync(prd, 'utf8').matchAll(REQ_DEFINITION_RE)].map((m) => m[1]) : []);
     for (const r of new Set(stripCode(text).match(REQ_REF_RE) || [])) if (!defined.has(r)) err(rel, 1, 'epics', `${r} is not defined in the epic's prd.md`);
   }
+}
+
+// ── glossary ────────────────────────────────────────────────────────────────
+
+function checkGlossary(texts, err) {
+  const rel = 'docs/GLOSSARY.md';
+  if (!texts.has(rel)) return;
+  for (const p of glossaryProblems(texts.get(rel))) err(rel, p.line, 'glossary', p.message);
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
